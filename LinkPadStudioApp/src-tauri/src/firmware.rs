@@ -12,6 +12,8 @@ use std::thread;
 const PLATFORMIO_INI: &str = include_str!("../templates/m5stickc-plus2/platformio.ini");
 const MAIN_CPP: &str = include_str!("../templates/m5stickc-plus2/src/main.cpp");
 const RUNTIME_H: &str = include_str!("../templates/m5stickc-plus2/include/LinkPadRuntime.h");
+const INPUT_ADAPTER_H: &str =
+    include_str!("../templates/m5stickc-plus2/include/LinkPadInputAdapter.h");
 const STATUS_OVERLAY_H: &str =
     include_str!("../templates/m5stickc-plus2/include/LinkPadStatusOverlay.h");
 const RUNTIME_CPP: &str = include_str!("../templates/m5stickc-plus2/src/LinkPadRuntime.cpp");
@@ -46,7 +48,7 @@ pub fn generate(project_dir: &Path, project: &Value) -> Result<PathBuf, String> 
     let runtime_project = runtime_project(project);
     let compact_json = serde_json::to_string(&runtime_project).map_err(error_text)?;
     let generated_header = format!(
-        "// Gerado pelo LinkPad Studio 0.5.1. Nao editar.\n#pragma once\n\nstatic const char LINKPAD_PROJECT_JSON[] = {};\n",
+        "// Gerado pelo LinkPad Studio 0.6.0. Nao editar.\n#pragma once\n\nstatic const char LINKPAD_PROJECT_JSON[] = {};\n",
         cpp_string_literal(&compact_json)
     );
 
@@ -60,6 +62,7 @@ pub fn generate(project_dir: &Path, project: &Value) -> Result<PathBuf, String> 
     )?;
     write(source_dir.join("main.cpp"), MAIN_CPP)?;
     write(include_dir.join("LinkPadRuntime.h"), RUNTIME_H)?;
+    write(include_dir.join("LinkPadInputAdapter.h"), INPUT_ADAPTER_H)?;
     write(include_dir.join("LinkPadStatusOverlay.h"), STATUS_OVERLAY_H)?;
     write(source_dir.join("LinkPadRuntime.cpp"), RUNTIME_CPP)?;
     write(include_dir.join("generated_project.h"), &generated_header)?;
@@ -208,7 +211,7 @@ fn copy_build_artifacts(staging_dir: &Path, log_dir: &Path) -> Result<(), String
 
 fn runtime_project(project: &Value) -> Value {
     json!({
-        "runtimeVersion": "0.5.0",
+        "runtimeVersion": "0.6.0",
         "hardwareId": project.pointer("/hardware/hardwareId").cloned().unwrap_or(json!("m5stickc-plus2")),
         "contractVersion": project.pointer("/agent/protocolVersion").cloned().unwrap_or(json!("0.1.0")),
         "deviceId": project.get("projectId").cloned().unwrap_or(json!("linkpad-device")),
@@ -477,6 +480,7 @@ mod tests {
             .unwrap()
             .contains("{{"));
         assert!(output.join("include/LinkPadStatusOverlay.h").exists());
+        assert!(output.join("include/LinkPadInputAdapter.h").exists());
         fs::remove_dir_all(directory).unwrap();
     }
 
@@ -501,6 +505,12 @@ mod tests {
         assert!(RUNTIME_CPP.contains("tag[\"protocolProfileId\"]"));
         assert!(RUNTIME_CPP.contains("sessionFor(profileId)"));
         assert!(RUNTIME_CPP.contains("LinkPadStatusOverlay::render"));
+        assert!(RUNTIME_CPP.contains("handleInput(input)"));
+        assert!(RUNTIME_CPP.contains("executeAction"));
+        assert!(RUNTIME_CPP.contains("inputBindings"));
+        assert!(!RUNTIME_CPP.contains("M5.BtnA"));
+        assert!(INPUT_ADAPTER_H.contains("M5.BtnA.wasPressed()"));
+        assert!(INPUT_ADAPTER_H.contains("{\"primary\", \"press\"}"));
         assert!(STATUS_OVERLAY_H.contains("drawWifi"));
         assert!(STATUS_OVERLAY_H.contains("drawAgent"));
         assert!(!RUNTIME_CPP.contains("WiFi:%s Agent:%s"));
@@ -600,6 +610,10 @@ mod tests {
                 "widgets": [
                     { "id": "value", "type": "tag_value", "x": 5, "y": 25, "width": 100, "height": 20, "visible": true, "props": { "tag": "MotorSpeed" } },
                     { "id": "write", "type": "write_button", "x": 5, "y": 60, "width": 80, "height": 24, "visible": true, "props": { "tag": "MotorSpeed", "text": "Set 42", "value": 42 } }
+                ],
+                "inputBindings": [
+                    { "inputId": "primary", "event": "press", "action": { "type": "navigate", "target": "next" } },
+                    { "inputId": "secondary", "event": "press", "action": { "type": "activateWidget", "widgetId": "write" } }
                 ]
             }],
             "build": { "serialPort": "", "baudRate": 115200 }

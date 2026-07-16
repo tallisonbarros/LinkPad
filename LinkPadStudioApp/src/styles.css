@@ -977,7 +977,9 @@ button.table-row.selected {
 .device-preview-wrap {
   padding: 24px;
   display: grid;
-  place-items: center;
+  align-content: start;
+  justify-items: center;
+  gap: 16px;
 }
 
 .device-preview {
@@ -1035,6 +1037,182 @@ button.table-row.selected {
 }
 
 .led.on { background: var(--ok); }
+
+.screen-controls-summary {
+  width: min(720px, 92%);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  background: #191a1c;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.screen-controls-title,
+.screen-controls-title > span,
+.screen-controls-title > button,
+.screen-controls-dialog header > div {
+  display: flex;
+  align-items: center;
+}
+
+.screen-controls-title {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.screen-controls-title > span { gap: 8px; }
+
+.screen-controls-title > button {
+  min-height: 32px;
+  padding: 0 10px;
+  gap: 6px;
+  color: var(--text);
+  background: #303236;
+  border-radius: 5px;
+}
+
+.screen-control-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.screen-control-chips button {
+  min-height: 54px;
+  padding: 8px 10px;
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  color: var(--text);
+  background: #232427;
+  border: 1px solid var(--line-soft);
+  border-radius: 5px;
+}
+
+.screen-control-chips button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.screen-control-chips small,
+.screen-control-card small,
+.screen-controls-dialog header small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.screen-controls-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(5, 5, 6, 0.78);
+  backdrop-filter: blur(3px);
+}
+
+.screen-controls-dialog {
+  width: min(880px, 94vw);
+  max-height: 88vh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  color: var(--text);
+  background: #18191b;
+  border: 1px solid #47494d;
+  border-radius: 8px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.58);
+  overflow: hidden;
+}
+
+.screen-controls-dialog header,
+.screen-controls-dialog footer {
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.screen-controls-dialog footer {
+  justify-content: flex-end;
+  border-top: 1px solid var(--line-soft);
+  border-bottom: 0;
+}
+
+.screen-controls-dialog header > div { gap: 10px; }
+.screen-controls-dialog header span { display: grid; gap: 2px; }
+
+.screen-controls-dialog header > button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  color: var(--text);
+  background: #303236;
+  border-radius: 5px;
+}
+
+.screen-controls-list {
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+  overflow: auto;
+}
+
+.screen-control-card {
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  background: #202124;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.screen-control-card.reserved { opacity: 0.68; }
+
+.screen-control-card-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.screen-control-card-heading span { display: grid; gap: 3px; }
+
+.screen-control-card-heading em {
+  color: var(--accent);
+  font-size: 11px;
+  font-style: normal;
+  text-transform: uppercase;
+}
+
+.screen-control-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.screen-control-binding {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.8fr) repeat(3, minmax(150px, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.screen-control-binding label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.screen-control-binding input,
+.screen-control-binding select { width: 100%; min-width: 0; }
+
+.screen-control-binding input[readonly] { color: var(--muted); }
 
 .widget-editor {
   margin-left: 0;

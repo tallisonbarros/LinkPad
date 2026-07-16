@@ -28,7 +28,29 @@ Exemplo inicial:
       "indicators": ["wifi", "agent"]
     }
   },
-  "inputs": ["button_a", "button_b", "power_button"],
+  "inputs": [
+    {
+      "id": "primary",
+      "label": "Botao A",
+      "kind": "button",
+      "events": ["press"],
+      "configurable": true
+    },
+    {
+      "id": "secondary",
+      "label": "Botao B",
+      "kind": "button",
+      "events": ["press"],
+      "configurable": true
+    },
+    {
+      "id": "power",
+      "label": "Power",
+      "kind": "button",
+      "events": [],
+      "configurable": false
+    }
+  ],
   "network": ["wifi"],
   "storage": ["nvs", "spiffs"],
   "capabilities": {
@@ -50,6 +72,14 @@ Exemplos:
 - Device com poucos botoes precisa de navegacao por foco.
 - Device com Ethernet nativo pode aceitar perfis de rede cabeada.
 - Posicao e indicadores permanentes do runtime sao definidos pelo `statusOverlay` do manifesto, sem coordenadas absolutas especificas do M5.
+
+## Entradas e Controles
+
+`inputs` nao contem nomes de APIs de bibliotecas. Cada item declara um identificador logico estavel, rotulo de interface, tipo de controle, eventos normalizados e se o projeto pode configura-lo. Tipos previstos: `button`, `encoder`, `key` e `touch`. Eventos previstos: `press`, `longPress`, `doublePress`, `rotateLeft` e `rotateRight`.
+
+O Studio deve renderizar somente os controles e eventos do manifesto. O template do hardware converte sua API fisica nesses identificadores; por exemplo, o adaptador M5 converte `M5.BtnA` em `primary/press`. Um projeto nunca salva `M5.BtnA`, pino GPIO ou chamada de biblioteca em `screens.json`.
+
+Um controle com `configurable: false` pode aparecer para diagnostico, mas nao aceita vinculos. No M5StickC Plus2, Power fica reservado ate que o runtime ofereca um evento seguro e validado.
 
 ## Overlay de Status
 

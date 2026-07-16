@@ -1,13 +1,16 @@
 import type {
+  LinkPadInputBinding,
   LinkPadProject,
   LinkPadProjectV1,
+  LinkPadProjectV2,
+  LinkPadScreenV2,
   LinkPadTag,
   ProtocolProfile
 } from "./types";
 import { createDefaultStatusOverlay, normalizeStatusOverlay } from "../runtime/statusOverlay";
 
-export const CURRENT_PROJECT_SCHEMA = "0.2.0" as const;
-export const CURRENT_STUDIO_VERSION = "0.5.1" as const;
+export const CURRENT_PROJECT_SCHEMA = "0.3.0" as const;
+export const CURRENT_STUDIO_VERSION = "0.6.0" as const;
 
 export function createDefaultSimProfile(projectId: string): ProtocolProfile {
   return {
@@ -29,13 +32,16 @@ export function migrateProject(candidate: unknown): LinkPadProject {
   if (schemaVersion === CURRENT_PROJECT_SCHEMA) {
     return normalizeCurrentProject(candidate as LinkPadProject);
   }
+  if (schemaVersion === "0.2.0") {
+    return migrateV2ToV3(candidate as LinkPadProjectV2);
+  }
   if (schemaVersion === "0.1.0") {
-    return migrateV1ToV2(candidate as LinkPadProjectV1);
+    return migrateV2ToV3(migrateV1ToV2(candidate as LinkPadProjectV1));
   }
   throw new Error(`Versão de projeto não suportada: ${String(schemaVersion ?? "ausente")}.`);
 }
 
-export function migrateV1ToV2(project: LinkPadProjectV1): LinkPadProject {
+export function migrateV1ToV2(project: LinkPadProjectV1): LinkPadProjectV2 {
   if (!project.projectId || !project.name || !project.hardware || !project.agent) {
     throw new Error("O projeto 0.1.0 não possui os campos obrigatórios.");
   }
@@ -51,8 +57,8 @@ export function migrateV1ToV2(project: LinkPadProjectV1): LinkPadProject {
   }));
 
   return {
-    schemaVersion: CURRENT_PROJECT_SCHEMA,
-    studioVersion: CURRENT_STUDIO_VERSION,
+    schemaVersion: "0.2.0",
+    studioVersion: "0.2.0",
     projectId: project.projectId,
     name: project.name,
     description: project.description ?? "",
@@ -83,6 +89,37 @@ export function migrateV1ToV2(project: LinkPadProjectV1): LinkPadProject {
   };
 }
 
+export function createDefaultInputBindings(screen: LinkPadScreenV2): LinkPadInputBinding[] {
+  const bindings: LinkPadInputBinding[] = [{
+    inputId: "primary",
+    event: "press",
+    action: { type: "navigate", target: "next" }
+  }];
+  const firstWriteWidget = screen.widgets.find((widget) => widget.type === "write_button");
+  if (firstWriteWidget) {
+    bindings.push({
+      inputId: "secondary",
+      event: "press",
+      action: { type: "activateWidget", widgetId: firstWriteWidget.id }
+    });
+  }
+  return bindings;
+}
+
+export function migrateV2ToV3(project: LinkPadProjectV2): LinkPadProject {
+  return normalizeCurrentProject({
+    ...project,
+    schemaVersion: CURRENT_PROJECT_SCHEMA,
+    studioVersion: CURRENT_STUDIO_VERSION,
+    screens: (project.screens ?? []).map((screen) => ({
+      ...screen,
+      inputBindings: Array.isArray(screen.inputBindings)
+        ? screen.inputBindings
+        : createDefaultInputBindings(screen)
+    }))
+  });
+}
+
 function normalizeCurrentProject(project: LinkPadProject): LinkPadProject {
   if (!project.projectId || !project.name || !project.hardware || !project.agent) {
     throw new Error("O projeto não possui os campos obrigatórios.");
@@ -111,7 +148,12 @@ function normalizeCurrentProject(project: LinkPadProject): LinkPadProject {
     },
     protocols,
     tags: project.tags ?? [],
-    screens: project.screens ?? [],
+    screens: (project.screens ?? []).map((screen) => ({
+      ...screen,
+      inputBindings: Array.isArray(screen.inputBindings)
+        ? screen.inputBindings
+        : createDefaultInputBindings(screen)
+    })),
     assets: project.assets ?? { fonts: [], images: [] },
     build: project.build ?? { serialPort: "", baudRate: 115200 }
   };

@@ -29,7 +29,7 @@ Campos minimos:
 
 ```json
 {
-  "schemaVersion": "0.2.0",
+  "schemaVersion": "0.3.0",
   "projectId": "uuid",
   "name": "Meu Projeto",
   "description": "",
@@ -137,7 +137,33 @@ Lista as tags usadas pelo projeto. Cada tag industrial referencia um `protocolPr
 
 ## screens.json
 
-Lista telas, widgets, propriedades visuais e eventos.
+Lista telas, widgets, propriedades visuais e vinculos de entrada. Cada `inputBinding` associa um controle logico oferecido pelo manifesto, um evento suportado e uma acao declarativa:
+
+```json
+{
+  "screens": [
+    {
+      "id": "screen-main",
+      "name": "Principal",
+      "width": 240,
+      "height": 135,
+      "widgets": [],
+      "inputBindings": [
+        {
+          "inputId": "primary",
+          "event": "press",
+          "action": {
+            "type": "navigate",
+            "target": "next"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+Acoes iniciais: `navigate`, `writeTag`, `toggleTag` e `activateWidget`. Referencias a tela usam `screenId`; referencias industriais continuam usando a tag declarada no projeto.
 
 ## build.json
 
@@ -160,14 +186,15 @@ Migracao prevista:
 
 - `0.1.0`: projeto com Agente apontando para um PLC global configurado externamente.
 - `0.2.0`: projeto com `protocols.json` e descritores enviados pelo Device Runtime.
+- `0.3.0`: entradas estruturadas no catalogo e `inputBindings` declarativos por tela.
 
-## Implementacao 0.2.0 / Studio 0.5.1
+## Implementacao 0.3.0 / Studio 0.6.0
 
 Comandos Tauri atuais:
 
 - escolher pasta nativa;
 - criar diretorio `.linkpad`;
-- gravar todos os arquivos do schema `0.2.0`, incluindo rede, protocolos e build;
+- gravar todos os arquivos do schema `0.3.0`, incluindo rede, protocolos, controles de tela e build;
 - carregar projeto do disco;
 - gerar o runtime M5;
 - compilar e gravar via PlatformIO gerenciado pelo Studio, sem dependencia de instalacao global.
@@ -180,7 +207,9 @@ Ao abrir um projeto `0.1.0`, o Studio:
 4. preenche rede e build com valores padrao;
 5. grava backup em `.migration-backup/0.1.0` no primeiro salvamento.
 
-O Studio `0.5.1` nao altera `schemaVersion`: varios perfis, a associacao `protocolProfileId`, enderecos, extensoes compativeis de hardware e a configuracao de porta serial permanecem no schema `0.2.0`. Ao abrir ou salvar, `studioVersion` e normalizada para `0.5.1` e projetos sem `hardware.statusOverlay` recebem o default do catalogo.
+O Studio `0.5.1` manteve `schemaVersion` em `0.2.0`: varios perfis, a associacao `protocolProfileId`, enderecos, extensoes compativeis de hardware e a configuracao de porta serial permaneceram compativeis. Projetos sem `hardware.statusOverlay` receberam o default do catalogo.
+
+O Studio `0.6.0` migra projetos `0.1.0` e `0.2.0` para `0.3.0`. Antes do primeiro salvamento de um projeto `0.2.0`, os arquivos existentes sao copiados para `.migration-backup/0.2.0`. A normalizacao preserva `inputBindings` existentes; quando ausentes, converte o comportamento legado em `primary/press -> next` e, se houver `write_button`, `secondary/press -> activateWidget`.
 
 Varios itens de `profiles` podem permanecer habilitados. O runtime cria uma sessao independente para cada um e cada tag deve referenciar exatamente um perfil habilitado. Identificadores de perfil precisam ser unicos no projeto.
 

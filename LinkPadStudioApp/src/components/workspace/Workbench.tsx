@@ -25,7 +25,7 @@ export function Workbench({ project, hardware, activeTab, onSetProject, onOpenTa
             <Spec label="Display" value={`${hardware.display.width} x ${hardware.display.height}`} />
             <Spec label="Rede" value={hardware.network.join(", ")} />
             <Spec label="Storage" value={hardware.storage.join(", ")} />
-            <Spec label="Entradas" value={hardware.inputs.join(", ")} />
+            <Spec label="Entradas" value={hardware.inputs.map((input) => input.label).join(", ")} />
             <Spec label="Touch" value={hardware.display.touch ? "Sim" : "Nao"} />
           </div>
         </section>

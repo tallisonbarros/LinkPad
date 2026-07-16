@@ -17,7 +17,7 @@ export function ContextPanel({ project, hardware, activeTab }: ContextPanelProps
     device: [
       ["Hardware", hardware.name],
       ["Runtime", hardware.runtime],
-      ["Entrada", hardware.inputs.join(", ")]
+      ["Entrada", hardware.inputs.map((input) => input.label).join(", ")]
     ],
     communication: [
       ["Modo", project.agent.mode.toUpperCase()],

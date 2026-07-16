@@ -17,6 +17,7 @@ templates/
   m5stickc-plus2/
     platformio.ini
     include/
+      LinkPadInputAdapter.h
       LinkPadRuntime.h
       LinkPadStatusOverlay.h
     src/
@@ -26,6 +27,7 @@ templates/
 Projeto.linkpad/generated/m5stickc-plus2/
   platformio.ini
     include/
+      LinkPadInputAdapter.h
       LinkPadRuntime.h
       LinkPadStatusOverlay.h
       generated_project.h
@@ -75,7 +77,7 @@ O primeiro firmware deve suportar:
 - Botoes fisicos.
 - Indicadores de rede, agente, PLC e bateria.
 
-## Implementacao 0.5.0
+## Implementacao 0.6.0
 
 O comando Tauri `generate_firmware` copia os templates versionados e cria `generated_project.h` com um JSON compacto contendo apenas rede, Agent, protocolos, tags e telas. A geracao nao inclui timestamps e e coberta por teste de determinismo.
 
@@ -85,12 +87,16 @@ O Studio prepara e usa sua propria instalacao do PlatformIO em `%LOCALAPPDATA%\L
 
 Para proteger o build contra caminhos longos do Windows, o fonte gerado e sincronizado em `%LOCALAPPDATA%\LinkPadStudio\b\<id-do-projeto>` durante a compilacao. Ao concluir, `firmware.bin`, `firmware.elf`, `bootloader.bin` e `partitions.bin` disponiveis sao copiados para `Projeto.linkpad/build/firmware/`.
 
-Implementado: Wi-Fi, status, capabilities, sessoes por perfil, read em lote agrupado por perfil, write roteado pelo perfil da tag, renderizacao basica e botoes A/B. Indicadores de bateria, navegacao avancada e assets convertidos permanecem pendentes.
+Implementado: Wi-Fi, status, capabilities, sessoes por perfil, read em lote agrupado por perfil, write roteado pelo perfil da tag, renderizacao basica, adaptador A/B e motor de acoes por tela. Indicadores de bateria e assets convertidos permanecem pendentes.
 
-O runtime `0.5.0` continua copiando `type` e `address` de cada tag para o LinkPad Protocol. Portanto, perfis `sim` e `siemens-s7` simultaneos usam o mesmo template: o firmware nao importa nem executa bibliotecas industriais.
+O runtime `0.6.0` continua copiando `type` e `address` de cada tag para o LinkPad Protocol. Portanto, perfis `sim` e `siemens-s7` simultaneos usam o mesmo template: o firmware nao importa nem executa bibliotecas industriais.
 
 O estado embarcado guarda `sessionId`, proxima tentativa e saude das tags por identificador de perfil. Falha em uma sessao nao apaga as outras. O template e compilado em teste com dois perfis habilitados para validar o caminho multi-conectores no ESP32.
 
 `generated_project.h` inclui `ui.statusOverlay`, derivado do manifesto do hardware. `LinkPadStatusOverlay.h` e um renderer vetorial sem coordenadas fixas: ele consulta largura/altura do display, calcula a geometria responsiva e desenha somente os indicadores declarados. O runtime M5 usa primitivas compativeis com a abstracao grafica; futuros templates podem reutilizar o contrato e o renderer quando a API de display for equivalente.
 
 Os icones sao renderizados por ultimo, como marca d'agua nao interativa sobre todas as telas. Nao existe faixa de texto reservada e os contadores internos de sessoes/tags nao sao expostos na tela principal.
+
+`LinkPadInputAdapter.h` e a unica parte do template M5 que chama `M5.BtnA` e `M5.BtnB`. Ele captura o estado fisico e emite eventos logicos. `LinkPadRuntime.cpp` consulta `inputBindings` e executa a acao declarada, permitindo que futuros templates substituam apenas o adaptador de hardware.
+
+O firmware gerado inclui `inputBindings` dentro de cada item de `screens`. Essa extensao nao altera o LinkPad Protocol: `writeTag`, `toggleTag` e `activateWidget` continuam produzindo requisicoes no endpoint `/lpp/v1/write` existente, com `requestId` novo para cada intencao e sem retry automatico.

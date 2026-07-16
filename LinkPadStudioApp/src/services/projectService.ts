@@ -3,6 +3,7 @@ import { getHardwareManifest } from "../data/hardwareCatalog";
 import {
   CURRENT_PROJECT_SCHEMA,
   CURRENT_STUDIO_VERSION,
+  createDefaultInputBindings,
   createDefaultSimProfile,
   migrateProject
 } from "../domain/project/migrations";
@@ -23,6 +24,13 @@ export function createProject(input: {
   const now = new Date().toISOString();
   const hardware = getHardwareManifest(input.hardwareId);
   const projectId = createId("project");
+  const initialScreen = {
+    id: createId("screen"),
+    name: "Tela Principal",
+    width: hardware.display.width,
+    height: hardware.display.height,
+    widgets: []
+  };
 
   return {
     schemaVersion: CURRENT_PROJECT_SCHEMA,
@@ -58,15 +66,7 @@ export function createProject(input: {
     },
     protocols: [createDefaultSimProfile(projectId)],
     tags: [],
-    screens: [
-      {
-        id: createId("screen"),
-        name: "Tela Principal",
-        width: hardware.display.width,
-        height: hardware.display.height,
-        widgets: []
-      }
-    ],
+    screens: [{ ...initialScreen, inputBindings: createDefaultInputBindings(initialScreen) }],
     assets: {
       fonts: [],
       images: []

@@ -61,6 +61,8 @@ No Studio/runtime `0.5.0`, os estados permanentes de Wi-Fi e Agent passam a um o
 
 No Studio `0.5.1`, a gravacao deixa de depender da digitacao manual de `COMx`: a porta e escolhida entre as conexoes seriais detectadas pelo Windows, com atualizacao para devices conectados durante a sessao.
 
+No Studio/runtime `0.6.0`, controles fisicos passam a ser declarados pelo manifesto e configurados por tela. O M5 fornece apenas o primeiro adaptador A/B; a mesma estrutura aceita futuros botoes, teclas, encoders e eventos de outros hardwares.
+
 ## Fase 5 - Integracao Completa
 
 ```text
@@ -77,6 +79,8 @@ Proximo marco:
 6. avaliar OPC UA como segundo conector Siemens.
 
 Marco adicional concluido: varios perfis habilitados no mesmo firmware, com sessao e roteamento de tags independentes por `protocolProfileId`.
+
+Marco adicional concluido: navegacao e escrita por controles declarativos, sem funcoes A/B fixas no nucleo do runtime.
 
 ## Fora do MVP
 

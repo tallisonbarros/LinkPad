@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { CircleGauge, Monitor, Plus, Trash2, Type } from "lucide-react";
 import { RuntimeStatusOverlay } from "../../components/runtime/RuntimeStatusOverlay";
 import type { LinkPadProject, LinkPadScreen, LinkPadWidget } from "../../types/project";
+import { ScreenControlsEditor } from "./ScreenControlsEditor";
 
 interface ScreenEditorProps {
   project: LinkPadProject;
@@ -128,6 +129,7 @@ export function ScreenEditor({ project, screenId, onSetProject }: ScreenEditorPr
               />
               {screen.widgets.length === 0 && <div className="preview-label">Adicione um widget para começar</div>}
             </div>
+            <ScreenControlsEditor project={project} screen={screen} onUpdateScreen={updateScreen} />
           </div>
 
           <aside className="widget-editor">

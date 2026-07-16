@@ -46,6 +46,22 @@ O editor atual implementa:
 
 Gauge, barra, campo numerico, icones especializados e logs permanecem no roadmap. A validacao de build bloqueia widgets fora da tela, referencias a tags inexistentes e botoes ligados a tags somente leitura.
 
+## Controles da Tela
+
+No Studio `0.6.0`, abaixo do display existe um resumo `Controles desta tela`. Os itens sao gerados a partir de `hardware.inputs`; nao existe lista fixa de A/B/Power na interface. A acao `Configurar` abre um modal com uma linha por evento disponivel.
+
+Cada linha permite escolher:
+
+- sem acao;
+- proxima tela;
+- tela anterior;
+- tela especifica;
+- acionar widget interativo;
+- escrever valor em tag;
+- alternar tag booleana `readWrite`.
+
+Campos adicionais aparecem conforme a acao: tela destino, widget, tag e valor. Controles reservados continuam visiveis, mas desabilitados. A configuracao pertence a `screen.inputBindings`, nao a coordenadas do display nem a detalhes do M5.
+
 ## Overlay Permanente do Runtime
 
 No Studio `0.5.0`, o preview mostra a mesma marca d'agua de Wi-Fi e Agent gerada no firmware. Ela nao pertence a `screen.widgets`, nao pode ser selecionada/arrastada e aparece em todas as telas conforme `hardware.statusOverlay`.
@@ -88,3 +104,7 @@ O Studio deve impedir:
 - Widget touch em hardware sem touch sem interacao alternativa.
 - Escrita em tag read-only.
 - Tag industrial sem perfil de protocolo ou endereco valido.
+- Controle inexistente, reservado ou evento nao oferecido pelo manifesto.
+- Mais de uma acao para o mesmo par `inputId/event` na tela.
+- Acao ligada a tela, widget ou tag inexistente.
+- Alternancia em tag que nao seja booleana `readWrite`.

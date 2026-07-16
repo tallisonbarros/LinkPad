@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include "LinkPadInputAdapter.h"
 
 enum class LinkPadState {
   Booting,
@@ -26,7 +27,10 @@ class LinkPadRuntime {
   void ensureSessions();
   bool openSession(JsonObjectConst profile);
   bool readTags(JsonObjectConst profile);
-  bool writeFromCurrentScreen();
+  bool handleInput(const LinkPadInputEvent& input);
+  bool executeAction(JsonObjectConst action);
+  bool writeWidget(JsonObjectConst widget);
+  bool writeTagValue(const char* tagName, JsonVariantConst value);
   int request(const String& method, const String& path, const String& body, String& response);
   JsonObject connectorStateFor(const char* profileId);
   String sessionFor(const char* profileId) const;
@@ -44,6 +48,7 @@ class LinkPadRuntime {
   DynamicJsonDocument config_{24576};
   DynamicJsonDocument values_{8192};
   DynamicJsonDocument connectorStates_{8192};
+  LinkPadInputAdapter inputAdapter_;
   LinkPadState state_ = LinkPadState::Booting;
   bool agentOnline_ = false;
   uint32_t lastPollAt_ = 0;

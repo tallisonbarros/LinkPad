@@ -8,8 +8,8 @@ describe("project migration", () => {
   it("migrates 0.1.0 projects without losing the existing tag", () => {
     const migrated = migrateProject(legacyProject);
 
-    expect(migrated.schemaVersion).toBe("0.2.0");
-    expect(migrated.studioVersion).toBe("0.5.1");
+    expect(migrated.schemaVersion).toBe("0.3.0");
+    expect(migrated.studioVersion).toBe("0.6.0");
     expect(migrated.agent.protocolVersion).toBe("0.1.0");
     expect(migrated.protocols).toEqual([createDefaultSimProfile("project-legacy")]);
     expect(migrated.hardware.statusOverlay).toEqual({
@@ -24,6 +24,65 @@ describe("project migration", () => {
       address: { key: "Motor.Speed" }
     });
     expect(migrated.screens).toHaveLength(1);
+    expect(migrated.screens[0].inputBindings).toEqual([{
+      inputId: "primary",
+      event: "press",
+      action: { type: "navigate", target: "next" }
+    }]);
+  });
+
+  it("migrates 0.2.0 implicit M5 behavior into explicit screen controls", () => {
+    const migrated = migrateProject({
+      ...legacyProject,
+      schemaVersion: "0.2.0",
+      studioVersion: "0.5.1",
+      network: { mode: "wifi", ssid: "factory", password: "" },
+      agent: { ...legacyProject.agent, protocolVersion: "0.1.0" },
+      protocols: [createDefaultSimProfile("project-legacy")],
+      tags: [{
+        ...legacyProject.tags[0],
+        direction: "readWrite",
+        protocolProfileId: "sim-main",
+        address: { key: "Motor.Speed" },
+        min: 0,
+        max: 60
+      }],
+      screens: [{
+        ...legacyProject.screens[0],
+        widgets: [{ id: "write-speed", type: "write_button", x: 5, y: 50, width: 80, height: 24, visible: true, props: { tag: "MotorSpeed", value: 42 } }]
+      }],
+      build: { serialPort: "", baudRate: 115200 }
+    });
+
+    expect(migrated.schemaVersion).toBe("0.3.0");
+    expect(migrated.screens[0].inputBindings).toEqual([
+      { inputId: "primary", event: "press", action: { type: "navigate", target: "next" } },
+      { inputId: "secondary", event: "press", action: { type: "activateWidget", widgetId: "write-speed" } }
+    ]);
+  });
+
+  it("rejects bindings for reserved hardware controls", () => {
+    const migrated = migrateProject(legacyProject);
+    migrated.screens[0].inputBindings = [{
+      inputId: "power",
+      event: "press",
+      action: { type: "navigate", target: "next" }
+    }];
+
+    const issues = validateProjectForBuild(migrated);
+    expect(issues.some((issue) => issue.path.includes("inputBindings.power") && issue.message.includes("reservado"))).toBe(true);
+  });
+
+  it("rejects screen actions that write to read-only tags", () => {
+    const migrated = migrateProject(legacyProject);
+    migrated.screens[0].inputBindings = [{
+      inputId: "secondary",
+      event: "press",
+      action: { type: "writeTag", tag: "MotorSpeed", value: 10 }
+    }];
+
+    const issues = validateProjectForBuild(migrated);
+    expect(issues.some((issue) => issue.path.includes("inputBindings.secondary") && issue.message.includes("somente leitura"))).toBe(true);
   });
 
   it("accepts a private Siemens S7 profile and typed DB address", () => {

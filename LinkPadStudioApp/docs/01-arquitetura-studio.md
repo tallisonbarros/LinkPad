@@ -39,13 +39,15 @@ src/data/hardwareCatalog.ts
 src/data/connectorCatalog.ts
 src/domain/project/
 src/features/
+src/features/screens/ScreenControlsEditor.tsx
 src-tauri/src/firmware.rs
 src-tauri/src/serial_ports.rs
 src-tauri/src/toolchain.rs
 src-tauri/templates/m5stickc-plus2/
+src-tauri/templates/m5stickc-plus2/include/LinkPadInputAdapter.h
 ```
 
-O shell original foi preservado. A versao `0.2.0` adicionou editores funcionais e gerador de runtime. A versao `0.3.0` acrescentou o manifesto/editor declarativo do `siemens-s7`. A versao `0.4.0` completa o gerenciador de perfis e o runtime multi-conectores. A versao `0.5.0` adiciona o overlay portatil de status orientado pelo manifesto de hardware, sem mudar o papel do Agent. A versao `0.5.1` move a descoberta de portas seriais para o backend nativo e elimina a digitacao livre de `COMx` na interface.
+O shell original foi preservado. A versao `0.2.0` adicionou editores funcionais e gerador de runtime. A versao `0.3.0` acrescentou o manifesto/editor declarativo do `siemens-s7`. A versao `0.4.0` completa o gerenciador de perfis e o runtime multi-conectores. A versao `0.5.0` adiciona o overlay portatil de status orientado pelo manifesto de hardware, sem mudar o papel do Agent. A versao `0.5.1` move a descoberta de portas seriais para o backend nativo. A versao `0.6.0` acrescenta controles e acoes declarativas por tela, sem acoplar o contrato a botoes M5.
 
 ## Fluxo Principal
 
@@ -56,6 +58,7 @@ Usuario informa o endpoint do agente
 Usuario cria perfis declarativos de protocolo
 Usuario cria/importa tags
 Usuario cria telas
+Usuario associa controles do hardware a acoes por tela
 Usuario simula
 Studio gera runtime
 Studio prepara/reutiliza a toolchain privada
@@ -75,6 +78,7 @@ O Studio conhece:
 - Perfis de protocolo usados pelo runtime.
 - Endpoint HTTP e politica de acesso ao Agente.
 - Geracao de firmware.
+- Controles logicos oferecidos pelo manifesto e acoes declaradas em cada tela.
 
 O Studio nao conhece:
 
@@ -121,6 +125,8 @@ No Studio `0.4.0`, a tela Conectores permite criar, selecionar, habilitar e remo
 
 No Studio `0.5.0`, indicadores permanentes pertencem a uma camada de overlay do runtime, separada de widgets e telas. O preview React e o template embarcado consomem o mesmo descritor `hardware.statusOverlay`; cada renderer adapta a geometria ao display alvo.
 
+No Studio `0.6.0`, entradas fisicas pertencem a uma camada `Hardware Input Adapter`. O manifesto informa controles/eventos disponiveis, a tela salva `inputBindings` e o `Event Engine` executa a acao. O editor nunca referencia `M5.BtnA`; somente o adaptador do template M5 conhece essa API.
+
 ## Decisao de Desktop
 
 Contexto:
@@ -162,6 +168,8 @@ prepare_toolchain
 O build nunca resolve `pio` pelo `PATH`. O comando usa o executavel absoluto em `%LOCALAPPDATA%\LinkPadStudio\pio`, sincroniza o fonte gerado em `%LOCALAPPDATA%\LinkPadStudio\b\<id>` e copia os artefatos finais de volta para o projeto. O staging compacto evita falhas do toolchain ESP32 provocadas por caminhos longos no Windows.
 
 `run_firmware_build` tambem executa em uma tarefa bloqueante separada da thread da interface. A saida padrao e a saida de erro do PlatformIO sao lidas enquanto o processo esta ativo e convertidas em eventos `firmware-progress`, mantendo a janela responsiva durante compilacoes e gravacoes longas.
+
+O template M5 inclui `LinkPadInputAdapter.h`, que emite eventos logicos `primary/press` e `secondary/press`. `LinkPadRuntime` localiza o vinculo na tela corrente e executa navegacao ou escrita pelo motor generico; outros hardwares devem fornecer seu proprio adaptador mantendo o mesmo contrato.
 
 `list_serial_ports` consulta o sistema operacional em uma tarefa bloqueante e devolve somente descritores de portas atualmente detectadas. O frontend preserva uma porta salva que esteja temporariamente ausente para diagnostico, mas nao permite iniciar `flash` ate que uma porta retornada por esse comando seja selecionada. Esse estado e configuracao local de deploy e nao afeta o runtime gerado.
 

@@ -268,6 +268,37 @@ Data:
 
 2026-07-16
 
+## Decisao Arquitetural: Controles de Tela Independentes de Hardware
+
+Decisao:
+
+O Studio `0.6.0` trata botoes, teclas, encoders e futuras entradas como controles declarados pelo manifesto do hardware. Cada tela do schema `0.3.0` associa `inputId` e evento normalizado a uma acao declarativa em `inputBindings`. O runtime executa essas acoes por um motor comum; cada template fornece apenas um adaptador entre a API fisica do device e os identificadores logicos.
+
+Contexto:
+
+O primeiro runtime tratava `M5.BtnA` como proxima tela e `M5.BtnB` como acionamento implicito do primeiro `write_button`. Esse comportamento era ambiguo com varios widgets e tornava o fluxo exclusivo do M5StickC Plus2, contrariando a expansao planejada para outros hardwares.
+
+Alternativas consideradas:
+
+- Manter funcoes fixas por botao dentro de cada template.
+- Configurar botoes M5 diretamente nos widgets.
+- Declarar controles e acoes por tela, resolvidos por uma abstracao de entrada do runtime.
+
+Consequencias:
+
+- O catalogo declara entradas estruturadas com identificador, rotulo, tipo, eventos e disponibilidade.
+- O Studio monta a interface de configuracao a partir do manifesto, sem listas fixas de botoes M5.
+- O runtime M5 converte A/B em `primary/press` e `secondary/press`; futuros templates podem emitir outros controles e eventos.
+- Navegacao, escrita de tag, alternancia booleana e acionamento de widget usam o mesmo motor de acoes.
+- Power permanece reservado no M5 ate existir um evento seguro e compilado no adaptador.
+- Escritas continuam usando o LinkPad Protocol existente e nunca sao repetidas automaticamente.
+- Projetos `0.1.0`/`0.2.0` recebem migracao e backup; o comportamento implicito anterior vira vinculo explicito.
+- Agent e LinkPad Protocol nao mudam.
+
+Data:
+
+2026-07-16
+
 ## Registro de Decisao
 
 Para decisoes arquiteturais relevantes, registre no documento de arquitetura aplicavel:

@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.6.0 - 2026-07-16
+
+### Adicionado
+
+- Contrato `inputBindings` por tela, ligando controles e eventos normalizados a ações declarativas.
+- Manifesto estruturado de entradas de hardware com identificador lógico, rótulo, tipo, eventos e disponibilidade para configuração.
+- Editor `Controles desta tela`, com resumo abaixo do display e modal alimentado pelo catálogo do hardware.
+- Ações de navegação, escrita de valor, alternância booleana e acionamento de widget interativo.
+- `LinkPadInputAdapter` no template M5, isolando `M5.BtnA` e `M5.BtnB` do motor genérico de ações.
+- Validação de controles reservados/ausentes, eventos incompatíveis, referências e valores de escrita.
+- Backup de projetos `0.2.0` em `.migration-backup/0.2.0` antes do primeiro salvamento migrado.
+
+### Alterado
+
+- Schema do projeto passa a `0.3.0`; Studio e Device Runtime passam a `0.6.0`.
+- O botão B deixa de executar implicitamente o primeiro widget de escrita; toda ação física passa a ser declarada na tela.
+- Novas telas usam as dimensões do manifesto do hardware, removendo o valor fixo `240 x 135` do shell.
+- Power permanece visível no catálogo do M5, mas reservado até o adaptador oferecer eventos seguros.
+
+### Migração
+
+- Projetos `0.1.0` e `0.2.0` são migrados automaticamente para `0.3.0`.
+- O comportamento anterior é preservado como `primary/press -> próxima tela` e `secondary/press -> acionar primeiro write_button`, quando esse widget existe.
+
+### Compatibilidade
+
+- LinkPad Protocol permanece `0.1.0` e o Agent não exige alteração.
+- Escritas continuam sem repetição automática após falha.
+- Instaladores não foram reconstruídos nesta iteração de desenvolvimento.
+
 ## 0.5.1 - 2026-07-16
 
 ### Adicionado

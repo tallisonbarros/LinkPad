@@ -10,6 +10,18 @@ export interface RuntimeStatusOverlayConfig {
   indicators: RuntimeStatusIndicator[];
 }
 
+export type HardwareInputKind = "button" | "encoder" | "key" | "touch";
+export type HardwareInputEvent = "press" | "longPress" | "doublePress" | "rotateLeft" | "rotateRight";
+
+export interface HardwareInputManifest {
+  id: string;
+  label: string;
+  kind: HardwareInputKind;
+  events: HardwareInputEvent[];
+  configurable: boolean;
+  description?: string;
+}
+
 export interface HardwareManifest {
   id: HardwareId;
   name: string;
@@ -22,7 +34,7 @@ export interface HardwareManifest {
     color: boolean;
     statusOverlay: RuntimeStatusOverlayConfig;
   };
-  inputs: string[];
+  inputs: HardwareInputManifest[];
   network: string[];
   storage: string[];
   capabilities: {
@@ -51,6 +63,18 @@ export interface ProtocolProfile {
 }
 
 export type TagValue = string | number | boolean;
+
+export type LinkPadAction =
+  | { type: "navigate"; target: "next" | "previous" | "screen"; screenId?: string }
+  | { type: "writeTag"; tag: string; value: TagValue }
+  | { type: "toggleTag"; tag: string }
+  | { type: "activateWidget"; widgetId: string };
+
+export interface LinkPadInputBinding {
+  inputId: string;
+  event: HardwareInputEvent;
+  action: LinkPadAction;
+}
 
 export interface LinkPadTag {
   name: string;
@@ -82,6 +106,7 @@ export interface LinkPadScreen {
   width: number;
   height: number;
   widgets: LinkPadWidget[];
+  inputBindings: LinkPadInputBinding[];
 }
 
 export interface LinkPadWidget {
@@ -101,8 +126,8 @@ export interface LinkPadWidget {
 }
 
 export interface LinkPadProject {
-  schemaVersion: "0.2.0";
-  studioVersion: "0.5.1";
+  schemaVersion: "0.3.0";
+  studioVersion: "0.6.0";
   projectId: string;
   name: string;
   description: string;
@@ -142,6 +167,16 @@ export interface LinkPadProject {
   };
 }
 
+export type LinkPadScreenV2 = Omit<LinkPadScreen, "inputBindings"> & {
+  inputBindings?: LinkPadInputBinding[];
+};
+
+export type LinkPadProjectV2 = Omit<LinkPadProject, "schemaVersion" | "studioVersion" | "screens"> & {
+  schemaVersion: "0.2.0";
+  studioVersion: string;
+  screens: LinkPadScreenV2[];
+};
+
 export interface LinkPadProjectV1 {
   schemaVersion: "0.1.0";
   studioVersion: string;
@@ -156,7 +191,7 @@ export interface LinkPadProjectV1 {
   };
   agent: Omit<LinkPadProject["agent"], "protocolVersion">;
   tags?: Array<Omit<LinkPadTag, "protocolProfileId" | "address">>;
-  screens?: LinkPadScreen[];
+  screens?: LinkPadScreenV2[];
   assets?: LinkPadProject["assets"];
 }
 

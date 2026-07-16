@@ -49,14 +49,28 @@ Device Runtime
 - `write_pending`
 - `write_failed`
 
+## Entradas e Acoes
+
+O runtime recebe eventos normalizados do adaptador do hardware. O `Input Manager` nao conhece telas ou tags; ele apenas fornece `inputId` e `event`. O `Event Engine` consulta `inputBindings` da tela corrente e executa a acao declarada.
+
+Acoes implementadas no runtime `0.6.0`:
+
+- `navigate`: proxima tela, tela anterior ou `screenId` especifico;
+- `writeTag`: escreve um valor fixo usando a sessao da tag;
+- `toggleTag`: inverte uma tag booleana `readWrite` a partir do ultimo valor conhecido;
+- `activateWidget`: executa um `write_button` especifico da tela.
+
+Falhas de escrita entram em `write_failed` e nunca geram repeticao automatica. Controles/eventos ausentes sao ignorados pelo runtime e bloqueados pela validacao do Studio.
+
 ## M5StickC Plus2
 
-No M5StickC Plus2, o runtime inicial deve mapear:
+No M5StickC Plus2, o adaptador `LinkPadInputAdapter` mapeia:
 
-- Botao A: selecionar/confirmar ou navegar conforme tela.
-- Botao B: decremento/navegacao.
-- Power: incremento/navegacao.
-- Long press: menu/configuracao.
+- Botao A: `primary/press`.
+- Botao B: `secondary/press`.
+- Power: reservado, sem evento configuravel nesta versao.
+
+O significado de A/B e definido por cada tela. Long press, duplo clique e outros eventos permanecem previstos no contrato, mas so aparecem quando o adaptador e o manifesto do hardware os oferecerem.
 
 ## Runtime MVP Implementado
 
@@ -72,7 +86,7 @@ O template `m5stickc-plus2` implementa:
 - escrita considerada concluida somente quando o item retorna `status: written`;
 - backoff simples para rede/Agent indisponivel;
 - renderizacao de texto, valor, booleano, status e botao;
-- botao A para trocar de tela e botao B para executar a primeira escrita da tela.
+- adaptador fisico A/B e motor declarativo de acoes por tela.
 
 Limitacoes do MVP:
 
@@ -92,3 +106,5 @@ HTTP 200 nao implica sucesso industrial do lote. O runtime usa `status`/`quality
 O runtime `0.5.0` remove a faixa textual `WiFi/Agent/S/T`. Cada tela recebe uma marca d'agua com dois icones vetoriais: Wi-Fi e Agent em verde quando disponiveis e vermelho quando indisponiveis. Sessoes e saude de tags continuam no estado interno, mas nao ocupam a interface principal.
 
 O overlay e uma camada do `Screen Renderer`, nao um widget salvo em cada tela. Ele usa o descritor `hardware.statusOverlay`, escala pela dimensao do display e e renderizado depois dos widgets. Assim, novas familias de hardware podem reutilizar o mesmo contrato e fornecer apenas o adaptador grafico do seu template.
+
+No runtime `0.6.0`, o mesmo principio se aplica a entrada: `LinkPadRuntime` nao chama `M5.BtnA` ou `M5.BtnB`. Apenas `LinkPadInputAdapter.h` conhece M5Unified; novos templates substituem esse adaptador e mantem o motor de acoes.

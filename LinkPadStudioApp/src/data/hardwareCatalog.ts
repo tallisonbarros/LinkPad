@@ -18,7 +18,32 @@ export const hardwareCatalog: HardwareManifest[] = [
         indicators: ["wifi", "agent"]
       }
     },
-    inputs: ["button_a", "button_b", "power_button"],
+    inputs: [
+      {
+        id: "primary",
+        label: "Botão A",
+        kind: "button",
+        events: ["press"],
+        configurable: true,
+        description: "Controle frontal principal do M5StickC Plus2."
+      },
+      {
+        id: "secondary",
+        label: "Botão B",
+        kind: "button",
+        events: ["press"],
+        configurable: true,
+        description: "Controle lateral secundário do M5StickC Plus2."
+      },
+      {
+        id: "power",
+        label: "Power",
+        kind: "button",
+        events: [],
+        configurable: false,
+        description: "Reservado para energia até o runtime oferecer eventos seguros."
+      }
+    ],
     network: ["wifi"],
     storage: ["nvs", "spiffs"],
     capabilities: {

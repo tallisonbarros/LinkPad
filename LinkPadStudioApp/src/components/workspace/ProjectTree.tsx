@@ -1,4 +1,6 @@
 import { Cable, ChevronRight, Cpu, FileJson, Folder, Gauge, HardDrive, Network, Plus, Tags, Wrench } from "lucide-react";
+import { getHardwareManifest } from "../../data/hardwareCatalog";
+import { createDefaultInputBindings } from "../../domain/project/migrations";
 import type { LinkPadProject, WorkspaceTab } from "../../types/project";
 
 interface ProjectTreeProps {
@@ -19,13 +21,15 @@ export function ProjectTree({ project, onSetProject, onOpenTab }: ProjectTreePro
 
   function createScreen() {
     const nextNumber = project.screens.length + 1;
-    const screen = {
+    const display = getHardwareManifest(project.hardware.hardwareId).display;
+    const screenBase = {
       id: createId("screen"),
       name: `Tela ${nextNumber}`,
-      width: 240,
-      height: 135,
+      width: display.width,
+      height: display.height,
       widgets: []
     };
+    const screen = { ...screenBase, inputBindings: createDefaultInputBindings(screenBase) };
     onSetProject({
       ...project,
       screens: [...project.screens, screen],

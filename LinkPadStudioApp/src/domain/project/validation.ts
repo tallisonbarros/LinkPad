@@ -1,4 +1,5 @@
-import type { LinkPadProject, LinkPadTag, ProtocolProfile } from "./types";
+import { getHardwareManifest } from "../../data/hardwareCatalog";
+import type { LinkPadInputBinding, LinkPadProject, LinkPadScreen, LinkPadTag, ProtocolProfile, TagValue } from "./types";
 
 export interface ValidationIssue {
   path: string;
@@ -10,6 +11,7 @@ export function validateProjectForBuild(project: LinkPadProject): ValidationIssu
   const issues: ValidationIssue[] = [];
   const enabledProfileIds = new Set(project.protocols.filter((profile) => profile.enabled).map((profile) => profile.id));
   const tagNames = new Set<string>();
+  const hardware = getHardwareManifest(project.hardware.hardwareId);
 
   if (!project.network.ssid.trim()) {
     issues.push({ path: "network.ssid", message: "Informe a rede Wi-Fi do device.", severity: "error" });
@@ -59,6 +61,8 @@ export function validateProjectForBuild(project: LinkPadProject): ValidationIssu
   }
 
   const knownTags = new Map(project.tags.map((tag) => [tag.name, tag]));
+  const knownScreenIds = new Set(project.screens.map((screen) => screen.id));
+  const hardwareInputs = new Map(hardware.inputs.map((input) => [input.id, input]));
   for (const screen of project.screens) {
     for (const widget of screen.widgets) {
       if (widget.x < 0 || widget.y < 0 || widget.x + widget.width > screen.width || widget.y + widget.height > screen.height) {
@@ -71,6 +75,26 @@ export function validateProjectForBuild(project: LinkPadProject): ValidationIssu
       if (widget.type === "write_button" && referencedTag && knownTags.get(referencedTag)?.direction === "read") {
         issues.push({ path: `screens.${screen.id}.${widget.id}.tag`, message: "Botão de escrita referencia uma tag somente leitura.", severity: "error" });
       }
+    }
+    const bindingKeys = new Set<string>();
+    for (const binding of screen.inputBindings) {
+      const bindingPath = `screens.${screen.id}.inputBindings.${binding.inputId}.${binding.event}`;
+      const bindingKey = `${binding.inputId}:${binding.event}`;
+      if (bindingKeys.has(bindingKey)) {
+        issues.push({ path: bindingPath, message: "O controle possui mais de uma ação para o mesmo evento.", severity: "error" });
+      }
+      bindingKeys.add(bindingKey);
+      const input = hardwareInputs.get(binding.inputId);
+      if (!input) {
+        issues.push({ path: bindingPath, message: "O controle não existe no hardware selecionado.", severity: "error" });
+        continue;
+      }
+      if (!input.configurable) {
+        issues.push({ path: bindingPath, message: "O controle está reservado pelo hardware/runtime.", severity: "error" });
+      } else if (!input.events.includes(binding.event)) {
+        issues.push({ path: bindingPath, message: "O evento não é suportado por este controle.", severity: "error" });
+      }
+      issues.push(...validateInputAction(binding, screen, knownScreenIds, knownTags, bindingPath));
     }
   }
 
@@ -96,6 +120,61 @@ export function validateProjectForBuild(project: LinkPadProject): ValidationIssu
   }
 
   return issues;
+}
+
+function validateInputAction(
+  binding: LinkPadInputBinding,
+  screen: LinkPadScreen,
+  knownScreenIds: Set<string>,
+  knownTags: Map<string, LinkPadTag>,
+  path: string
+): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const action = binding.action;
+  if (action.type === "navigate") {
+    if (!(["next", "previous", "screen"] as const).includes(action.target)) {
+      issues.push({ path: `${path}.action`, message: "Destino de navegação inválido.", severity: "error" });
+    } else if (action.target === "screen" && (!action.screenId || !knownScreenIds.has(action.screenId))) {
+      issues.push({ path: `${path}.action.screenId`, message: "A ação referencia uma tela inexistente.", severity: "error" });
+    }
+    return issues;
+  }
+  if (action.type === "activateWidget") {
+    const widget = screen.widgets.find((item) => item.id === action.widgetId);
+    if (!widget || widget.type !== "write_button") {
+      issues.push({ path: `${path}.action.widgetId`, message: "Selecione um widget de escrita existente nesta tela.", severity: "error" });
+    }
+    return issues;
+  }
+  if (action.type === "writeTag" || action.type === "toggleTag") {
+    const tag = knownTags.get(action.tag);
+    if (!tag) {
+      issues.push({ path: `${path}.action.tag`, message: "A ação referencia uma tag inexistente.", severity: "error" });
+      return issues;
+    }
+    if (tag.direction === "read") {
+      issues.push({ path: `${path}.action.tag`, message: "A ação não pode escrever em uma tag somente leitura.", severity: "error" });
+    }
+    if (action.type === "toggleTag" && (tag.type !== "bool" || tag.direction !== "readWrite")) {
+      issues.push({ path: `${path}.action.tag`, message: "Alternar exige uma tag booleana de leitura e escrita.", severity: "error" });
+    }
+    if (action.type === "writeTag" && !isCompatibleActionValue(action.value, tag)) {
+      issues.push({ path: `${path}.action.value`, message: "O valor da ação não é compatível com o tipo ou limite da tag.", severity: "error" });
+    }
+    return issues;
+  }
+  issues.push({ path: `${path}.action`, message: `Tipo de ação não suportado: ${String((action as { type?: unknown }).type ?? "ausente")}.`, severity: "error" });
+  return issues;
+}
+
+function isCompatibleActionValue(value: TagValue, tag: LinkPadTag) {
+  if (tag.type === "bool") return typeof value === "boolean";
+  if (tag.type === "string") return typeof value === "string";
+  if (typeof value !== "number" || !Number.isFinite(value)) return false;
+  if (tag.type === "int" && !Number.isInteger(value)) return false;
+  if (tag.min !== undefined && value < tag.min) return false;
+  if (tag.max !== undefined && value > tag.max) return false;
+  return true;
 }
 
 export function validateTag(project: LinkPadProject, tag: LinkPadTag): ValidationIssue[] {

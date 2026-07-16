@@ -28,16 +28,11 @@ void LinkPadRuntime::begin() {
 }
 
 void LinkPadRuntime::update() {
-  M5.update();
-  if (M5.BtnA.wasPressed()) {
-    const size_t count = config_["screens"].size();
-    if (count > 0) currentScreen_ = (currentScreen_ + 1) % count;
-    render();
-  }
-  if (M5.BtnB.wasPressed()) {
-    writeFromCurrentScreen();
-    render();
-  }
+  inputAdapter_.update();
+  LinkPadInputEvent input;
+  bool inputHandled = false;
+  while (inputAdapter_.next(input)) inputHandled = handleInput(input) || inputHandled;
+  if (inputHandled) render();
 
   const uint32_t now = millis();
   if (now < retryAt_) return;
@@ -226,69 +221,125 @@ bool LinkPadRuntime::readTags(JsonObjectConst profile) {
   return allGood;
 }
 
-bool LinkPadRuntime::writeFromCurrentScreen() {
+bool LinkPadRuntime::handleInput(const LinkPadInputEvent& input) {
   JsonArrayConst screens = config_["screens"].as<JsonArrayConst>();
   if (currentScreen_ >= screens.size()) return false;
   JsonObjectConst screen = screens[currentScreen_];
-  for (JsonObjectConst widget : screen["widgets"].as<JsonArrayConst>()) {
-    if (strcmp(widget["type"] | "", "write_button") != 0) continue;
-    const char* tagName = widget["props"]["tag"] | "";
-    for (JsonObjectConst tag : config_["tags"].as<JsonArrayConst>()) {
-      if (strcmp(tag["name"] | "", tagName) != 0) continue;
-      const char* profileId = tag["protocolProfileId"] | "";
-      const String sessionId = sessionFor(profileId);
-      if (sessionId.isEmpty()) {
-        state_ = LinkPadState::WriteFailed;
-        return false;
-      }
-
-      DynamicJsonDocument body(2048);
-      body["requestId"] = String("write-") + String(millis()) + "-" + String(++requestSequence_);
-      body["sessionId"] = sessionId;
-      JsonObject write = body.createNestedArray("writes").createNestedObject();
-      write["id"] = tag["name"];
-      write["type"] = tag["type"];
-      write["address"] = tag["address"];
-      write["value"] = widget["props"]["value"];
-      if (tag.containsKey("min")) write["min"] = tag["min"];
-      if (tag.containsKey("max")) write["max"] = tag["max"];
-      String payload;
-      serializeJson(body, payload);
-      String response;
-      const int code = request("POST", "/lpp/v1/write", payload, response);
-      if (code == 404 || code == 410) {
-        invalidateSession(profileId);
-        return false;
-      }
-      if (code != 200) {
-        if (code <= 0) {
-          agentOnline_ = false;
-          retryAt_ = millis() + 2000;
-        }
-        state_ = LinkPadState::WriteFailed;
-        return false;
-      }
-      DynamicJsonDocument parsed(2048);
-      if (deserializeJson(parsed, response)) {
-        state_ = LinkPadState::WriteFailed;
-        return false;
-      }
-      JsonArrayConst results = parsed["results"].as<JsonArrayConst>();
-      if (results.size() == 0) {
-        state_ = LinkPadState::WriteFailed;
-        return false;
-      }
-      JsonObjectConst result = results[0].as<JsonObjectConst>();
-      const bool written = strcmp(result["status"] | "error", "written") == 0;
-      if (written) {
-        if (result.containsKey("value")) values_[tagName]["value"] = result["value"];
-        else if (result.containsKey("valor")) values_[tagName]["value"] = result["valor"];
-        values_[tagName]["quality"] = result["quality"] | "unknown";
-      }
-      state_ = written ? LinkPadState::TargetOnline : LinkPadState::WriteFailed;
-      return written;
-    }
+  for (JsonObjectConst binding : screen["inputBindings"].as<JsonArrayConst>()) {
+    if (strcmp(binding["inputId"] | "", input.inputId) != 0) continue;
+    if (strcmp(binding["event"] | "", input.event) != 0) continue;
+    return executeAction(binding["action"].as<JsonObjectConst>());
   }
+  return false;
+}
+
+bool LinkPadRuntime::executeAction(JsonObjectConst action) {
+  const char* type = action["type"] | "";
+  if (strcmp(type, "navigate") == 0) {
+    JsonArrayConst screens = config_["screens"].as<JsonArrayConst>();
+    if (screens.size() == 0) return false;
+    const char* target = action["target"] | "next";
+    if (strcmp(target, "next") == 0) {
+      currentScreen_ = (currentScreen_ + 1) % screens.size();
+      return true;
+    }
+    if (strcmp(target, "previous") == 0) {
+      currentScreen_ = (currentScreen_ + screens.size() - 1) % screens.size();
+      return true;
+    }
+    if (strcmp(target, "screen") == 0) {
+      const char* screenId = action["screenId"] | "";
+      for (size_t index = 0; index < screens.size(); ++index) {
+        if (strcmp(screens[index]["id"] | "", screenId) != 0) continue;
+        currentScreen_ = index;
+        return true;
+      }
+    }
+    return false;
+  }
+  if (strcmp(type, "activateWidget") == 0) {
+    JsonArrayConst screens = config_["screens"].as<JsonArrayConst>();
+    if (currentScreen_ >= screens.size()) return false;
+    const char* widgetId = action["widgetId"] | "";
+    for (JsonObjectConst widget : screens[currentScreen_]["widgets"].as<JsonArrayConst>()) {
+      if (strcmp(widget["id"] | "", widgetId) == 0) return writeWidget(widget);
+    }
+    return false;
+  }
+  if (strcmp(type, "writeTag") == 0) {
+    return writeTagValue(action["tag"] | "", action["value"]);
+  }
+  if (strcmp(type, "toggleTag") == 0) {
+    const char* tagName = action["tag"] | "";
+    DynamicJsonDocument valueDocument(64);
+    valueDocument["value"] = !(values_[tagName]["value"] | false);
+    return writeTagValue(tagName, valueDocument["value"]);
+  }
+  return false;
+}
+
+bool LinkPadRuntime::writeWidget(JsonObjectConst widget) {
+  if (strcmp(widget["type"] | "", "write_button") != 0) return false;
+  return writeTagValue(widget["props"]["tag"] | "", widget["props"]["value"]);
+}
+
+bool LinkPadRuntime::writeTagValue(const char* tagName, JsonVariantConst value) {
+  for (JsonObjectConst tag : config_["tags"].as<JsonArrayConst>()) {
+    if (strcmp(tag["name"] | "", tagName) != 0) continue;
+    const char* profileId = tag["protocolProfileId"] | "";
+    const String sessionId = sessionFor(profileId);
+    if (sessionId.isEmpty()) {
+      state_ = LinkPadState::WriteFailed;
+      return false;
+    }
+
+    DynamicJsonDocument body(2048);
+    body["requestId"] = String("write-") + String(millis()) + "-" + String(++requestSequence_);
+    body["sessionId"] = sessionId;
+    JsonObject write = body.createNestedArray("writes").createNestedObject();
+    write["id"] = tag["name"];
+    write["type"] = tag["type"];
+    write["address"] = tag["address"];
+    write["value"] = value;
+    if (tag.containsKey("min")) write["min"] = tag["min"];
+    if (tag.containsKey("max")) write["max"] = tag["max"];
+    String payload;
+    serializeJson(body, payload);
+    String response;
+    const int code = request("POST", "/lpp/v1/write", payload, response);
+    if (code == 404 || code == 410) {
+      invalidateSession(profileId);
+      return false;
+    }
+    if (code != 200) {
+      if (code <= 0) {
+        agentOnline_ = false;
+        retryAt_ = millis() + 2000;
+      }
+      state_ = LinkPadState::WriteFailed;
+      return false;
+    }
+    DynamicJsonDocument parsed(2048);
+    if (deserializeJson(parsed, response)) {
+      state_ = LinkPadState::WriteFailed;
+      return false;
+    }
+    JsonArrayConst results = parsed["results"].as<JsonArrayConst>();
+    if (results.size() == 0) {
+      state_ = LinkPadState::WriteFailed;
+      return false;
+    }
+    JsonObjectConst result = results[0].as<JsonObjectConst>();
+    const bool written = strcmp(result["status"] | "error", "written") == 0;
+    if (written) {
+      if (result.containsKey("value")) values_[tagName]["value"] = result["value"];
+      else if (result.containsKey("valor")) values_[tagName]["value"] = result["valor"];
+      values_[tagName]["quality"] = result["quality"] | "unknown";
+    }
+    state_ = written ? LinkPadState::TargetOnline : LinkPadState::WriteFailed;
+    return written;
+  }
+  state_ = LinkPadState::WriteFailed;
   return false;
 }
 

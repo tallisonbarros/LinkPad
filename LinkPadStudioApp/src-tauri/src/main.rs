@@ -415,11 +415,13 @@ fn backup_legacy_project(project_dir: &Path) -> Result<(), String> {
     let Ok(project) = read_json(&project_path) else {
         return Ok(());
     };
-    if project.get("schemaVersion").and_then(Value::as_str) != Some("0.1.0") {
+    let Some(schema_version @ ("0.1.0" | "0.2.0")) =
+        project.get("schemaVersion").and_then(Value::as_str)
+    else {
         return Ok(());
-    }
+    };
 
-    let backup_dir = project_dir.join(".migration-backup").join("0.1.0");
+    let backup_dir = project_dir.join(".migration-backup").join(schema_version);
     if backup_dir.exists() {
         return Ok(());
     }
@@ -427,9 +429,12 @@ fn backup_legacy_project(project_dir: &Path) -> Result<(), String> {
     for file_name in [
         "project.json",
         "hardware.json",
+        "network.json",
         "agent.json",
+        "protocols.json",
         "tags.json",
         "screens.json",
+        "build.json",
     ] {
         let source = project_dir.join(file_name);
         if source.exists() {
@@ -519,6 +524,31 @@ mod tests {
         assert!(resolve_project_dir(&project)
             .unwrap()
             .ends_with("Minha Linha.linkpad"));
+    }
+
+    #[test]
+    fn backs_up_schema_0_2_before_saving_the_migrated_project() {
+        let directory = std::env::temp_dir().join(format!(
+            "linkpad-studio-project-backup-{}",
+            std::process::id()
+        ));
+        if directory.exists() {
+            fs::remove_dir_all(&directory).unwrap();
+        }
+        fs::create_dir_all(&directory).unwrap();
+        fs::write(
+            directory.join("project.json"),
+            r#"{"schemaVersion":"0.2.0","name":"Legacy"}"#,
+        )
+        .unwrap();
+        fs::write(directory.join("screens.json"), r#"{"screens":[]}"#).unwrap();
+
+        backup_legacy_project(&directory).unwrap();
+
+        let backup = directory.join(".migration-backup/0.2.0");
+        assert!(backup.join("project.json").exists());
+        assert!(backup.join("screens.json").exists());
+        fs::remove_dir_all(directory).unwrap();
     }
 
     #[test]
