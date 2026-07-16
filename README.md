@@ -39,6 +39,16 @@ Os READMEs de cada produto descrevem dependencias, testes e empacotamento:
 - [LinkPad Studio](LinkPadStudioApp/README.md)
 - [LinkPad Agent](LinkPadAgenteApp/README.md)
 
+## Colaboracao
+
+O repositorio e preparado para trabalho simultaneo de humanos e agentes de IA. A entrada canonica para agentes e [AGENTS.md](AGENTS.md); o guia humano e [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Uma tarefa pode ser expressa pelo resultado, por exemplo:
+
+> Integre suporte ao hardware M5Stack CoreS3.
+
+O agente deve isolar a entrega em uma branch, verificar trabalho simultaneo, localizar os contratos afetados, atualizar codigo e documentacao, executar as validacoes e preparar um Pull Request. O fluxo completo esta em [Fluxo de colaboracao](docs/05-fluxo-colaboracao.md).
+
 ## Seguranca do repositorio
 
 Projetos `*.linkpad`, configuracoes `.dev`, ambientes virtuais, dependencias, builds, instaladores e logs sao locais e nao entram no Git. Esses arquivos podem conter senha Wi-Fi, token do Agent, enderecos de PLC ou outros dados da planta.

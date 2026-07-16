@@ -7,7 +7,7 @@ O projeto esta dividido em dois produtos principais:
 - `LinkPadStudioApp`: ambiente de engenharia usado para criar projetos, telas, tags, catalogos de hardware, simulacao e geracao de runtimes.
 - `LinkPadAgenteApp`: agente/gateway industrial orientado a requisicoes. Ele expoe o LinkPad Protocol via HTTP/JSON e executa descritores industriais enviados pelo Device Runtime, usando drivers como Siemens OPC UA, Rockwell Logix/EtherNet-IP, Modbus e futuramente PROFINET IO.
 
-As pastas `App Exemplo M5Stick` e `App Exemplo Agente LinkPad` sao referencias funcionais. Elas nao devem ser alteradas sem pedido explicito do usuario. Use-as apenas para entender comportamento, contratos existentes e oportunidades de reciclagem.
+Quando presentes no ambiente local, as pastas `App Exemplo M5Stick` e `App Exemplo Agente LinkPad` sao referencias funcionais. Elas sao ignoradas pelo Git, nao fazem parte do clone colaborativo e nao devem ser alteradas sem pedido explicito do usuario. Nenhuma tarefa pode depender da existencia dessas pastas.
 
 ## Regra Principal
 
@@ -22,12 +22,42 @@ Antes de implementar qualquer mudanca, leia:
 1. `docs/00-governanca-ia.md`
 2. `docs/01-contratos-de-mudanca.md`
 3. `docs/02-versionamento.md`
-4. O documento da area alterada em `LinkPadStudioApp/docs` ou `LinkPadAgenteApp/docs`
+4. `docs/05-fluxo-colaboracao.md`
+5. O documento da area alterada em `LinkPadStudioApp/docs` ou `LinkPadAgenteApp/docs`
 
 Para mudancas entre device e agente, leia tambem:
 
 1. `LinkPadStudioApp/docs/07-integracao-com-agent-http.md`
 2. `LinkPadAgenteApp/docs/02-api-http-device-agent.md`
+
+## Fluxo Obrigatorio de Trabalho Simultaneo
+
+O repositorio deve transformar uma intencao curta, como "integre o hardware X", em uma entrega isolada, validada e revisavel.
+
+Antes de editar:
+
+1. Inspecione `git status`, a branch atual e os remotos sem descartar mudancas existentes.
+2. Atualize a visao do remoto com `git fetch origin --prune` e verifique branches ou Pull Requests que possam tocar a mesma area.
+3. Nunca implemente diretamente na `main`. Crie uma branch curta e descritiva com `scripts/start-work.ps1`, ou use o isolamento equivalente fornecido pelo ambiente.
+4. Publique a branch no inicio do trabalho quando houver autorizacao e acesso ao remoto. Se a ferramenta permitir, abra um Pull Request em modo draft para tornar o escopo visivel.
+5. Leia os contratos da area e delimite a menor fatia vertical que entrega o objetivo. Trabalho futuro relacionado deve ser registrado como continuacao, nao incorporado silenciosamente ao escopo.
+
+Durante a implementacao:
+
+- Preserve alteracoes simultaneas. Nunca resolva conflito descartando automaticamente o lado de outro colaborador.
+- Mudanca em contrato compartilhado exige documentacao no mesmo Pull Request e verificacao dos consumidores.
+- Nao use `git reset --hard`, `git checkout -- <arquivo>`, force push ou reescrita de historico para contornar divergencias.
+- Se o ambiente gerencia worktree ou branch automaticamente, respeite esse isolamento e nao troque de branch por conta propria.
+
+Antes de entregar:
+
+1. Execute `git fetch origin --prune` e integre `origin/main` na branch sem reescrever historico publicado.
+2. Execute `scripts/validate-work.ps1`; use `-All` quando a mudanca for transversal.
+3. Revise o diff, os arquivos gerados, os segredos e os Markdown afetados.
+4. Faca commit e push na branch. Prepare o Pull Request usando o template do repositorio.
+5. Nunca faca merge automatico na `main`; a aprovacao final e humana.
+
+O fluxo completo e canonico em `docs/05-fluxo-colaboracao.md`.
 
 ## Contratos Canonicos
 
@@ -40,6 +70,7 @@ Os contratos canonicos do projeto sao:
 - Catalogo de hardwares: `LinkPadStudioApp/docs/03-catalogo-de-hardwares.md`
 - Runtime embarcado: `LinkPadStudioApp/docs/04-runtime-device.md`
 - Configuracao do Agente: `LinkPadAgenteApp/docs/03-modelo-de-configuracao.md`
+- Colaboracao simultanea: `docs/05-fluxo-colaboracao.md`
 
 Quando dois documentos descrevem o mesmo contrato, eles devem permanecer consistentes.
 
@@ -63,6 +94,8 @@ Quando dois documentos descrevem o mesmo contrato, eles devem permanecer consist
 - A mudanca respeita a separacao Studio, Runtime e Agente?
 - Os Markdown afetados foram atualizados?
 - Os exemplos existentes foram preservados?
+- A tarefa foi isolada da `main` e sincronizada com o trabalho simultaneo?
+- O Pull Request descreve sobreposicoes, validacoes e continuacoes?
 - O contrato HTTP segue compatibilidade `value` e `valor` quando aplicavel?
 - O modo simulado continua possivel?
 - Estados de erro, offline, timeout e permissao foram considerados?
@@ -77,3 +110,4 @@ Ao concluir, informe:
 - Markdown atualizados.
 - Testes ou validacoes executadas.
 - Riscos restantes.
+- Branch publicada e Pull Request, quando fizerem parte da entrega autorizada.

@@ -25,6 +25,7 @@ Mapear requisitos principais aos documentos responsaveis.
 | Profinet futuro | `LinkPadAgenteApp/docs/07-driver-profinet-futuro.md` |
 | Seguranca de device, token e destinos | `LinkPadAgenteApp/docs/10-seguranca-token-whitelist.md` |
 | Deploy como servico Windows | `LinkPadAgenteApp/docs/14-servico-windows-deploy.md` |
+| Colaboracao simultanea de humanos e agentes | `AGENTS.md`, `docs/05-fluxo-colaboracao.md`, `CONTRIBUTING.md` |
 
 ## Regra de Uso
 

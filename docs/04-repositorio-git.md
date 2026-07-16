@@ -28,8 +28,15 @@ Os arquivos permanecem no computador; o `.gitignore` apenas impede que sejam adi
 - `feat/<assunto>`: funcionalidade.
 - `fix/<assunto>`: correcao.
 - `docs/<assunto>`: documentacao sem mudanca de comportamento.
+- `studio/<assunto>`, `agent/<assunto>`, `runtime/<assunto>`, `driver/<assunto>`, `contract/<assunto>`, `build/<assunto>` e `security/<assunto>`: mudancas alinhadas aos tipos da governanca.
 
-Para o MVP, branches curtas e merge na `main` sao suficientes. Antes do merge, codigo, contratos e Markdown devem estar coerentes.
+Branches devem ser curtas, publicadas cedo e integradas somente por Pull Request. Antes do merge, codigo, contratos, Markdown e CI devem estar coerentes. O processo operacional esta em `docs/05-fluxo-colaboracao.md`.
+
+O comando recomendado para iniciar uma tarefa e:
+
+```powershell
+.\scripts\start-work.ps1 -Branch feat/hardware-cores3
+```
 
 ## Commits
 
@@ -51,6 +58,14 @@ git diff --cached --stat
 git diff --cached --check
 ```
 
+Para executar automaticamente as validacoes proporcionais aos arquivos alterados:
+
+```powershell
+.\scripts\validate-work.ps1
+```
+
+Use `-All` para mudancas transversais e `-Bootstrap` em uma maquina que ainda nao preparou as dependencias locais.
+
 ## Publicacao
 
 Enquanto o produto estiver em MVP, a recomendacao e usar um repositorio privado. Depois de criar o repositorio vazio no provedor, sem README ou `.gitignore` adicionais:
@@ -61,6 +76,18 @@ git push -u origin main
 ```
 
 Nunca cole token de acesso na URL do remoto. Use o gerenciador de credenciais do Git para HTTPS ou uma chave SSH protegida.
+
+## Pull Requests e CI
+
+Todo Pull Request usa `.github/pull_request_template.md` e executa `.github/workflows/ci.yml`.
+
+Os checks estaveis sao:
+
+- `Agent / Python tests`;
+- `Studio / TypeScript and UI`;
+- `Studio / Rust backend`.
+
+No GitHub, recomenda-se proteger a `main` com Pull Request obrigatorio, checks obrigatorios, conversas resolvidas e bloqueio de force push e exclusao. Quando o plano da conta nao permitir impor alguma regra, ela continua obrigatoria como politica da equipe.
 
 ## Tags de Release
 
