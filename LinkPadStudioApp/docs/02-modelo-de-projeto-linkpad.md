@@ -150,6 +150,8 @@ Configuracao local de build/deploy:
 }
 ```
 
+`serialPort` continua persistido como string para manter compatibilidade e reproduzir a ultima escolha local. No Studio `0.5.1`, o valor e selecionado a partir das portas detectadas pelo sistema operacional; nao ha digitacao livre. Se a porta salva estiver desconectada, ela e exibida como indisponivel e a gravacao fica bloqueada ate o usuario atualizar e escolher uma porta presente.
+
 ## Compatibilidade
 
 Todo projeto deve conter `schemaVersion`. O Studio deve implementar migracoes quando mudar o schema.
@@ -159,7 +161,7 @@ Migracao prevista:
 - `0.1.0`: projeto com Agente apontando para um PLC global configurado externamente.
 - `0.2.0`: projeto com `protocols.json` e descritores enviados pelo Device Runtime.
 
-## Implementacao 0.2.0 / Studio 0.5.0
+## Implementacao 0.2.0 / Studio 0.5.1
 
 Comandos Tauri atuais:
 
@@ -178,7 +180,7 @@ Ao abrir um projeto `0.1.0`, o Studio:
 4. preenche rede e build com valores padrao;
 5. grava backup em `.migration-backup/0.1.0` no primeiro salvamento.
 
-O Studio `0.5.0` nao altera `schemaVersion`: varios perfis, a associacao `protocolProfileId`, enderecos e extensoes compativeis de hardware permanecem no schema `0.2.0`. Ao abrir ou salvar, `studioVersion` e normalizada para `0.5.0` e projetos sem `hardware.statusOverlay` recebem o default do catalogo.
+O Studio `0.5.1` nao altera `schemaVersion`: varios perfis, a associacao `protocolProfileId`, enderecos, extensoes compativeis de hardware e a configuracao de porta serial permanecem no schema `0.2.0`. Ao abrir ou salvar, `studioVersion` e normalizada para `0.5.1` e projetos sem `hardware.statusOverlay` recebem o default do catalogo.
 
 Varios itens de `profiles` podem permanecer habilitados. O runtime cria uma sessao independente para cada um e cada tag deve referenciar exatamente um perfil habilitado. Identificadores de perfil precisam ser unicos no projeto.
 

@@ -9,7 +9,7 @@ describe("project migration", () => {
     const migrated = migrateProject(legacyProject);
 
     expect(migrated.schemaVersion).toBe("0.2.0");
-    expect(migrated.studioVersion).toBe("0.5.0");
+    expect(migrated.studioVersion).toBe("0.5.1");
     expect(migrated.agent.protocolVersion).toBe("0.1.0");
     expect(migrated.protocols).toEqual([createDefaultSimProfile("project-legacy")]);
     expect(migrated.hardware.statusOverlay).toEqual({

@@ -35,6 +35,12 @@ export interface ToolchainProgress {
   percent: number;
 }
 
+export interface SerialPortDescriptor {
+  name: string;
+  label: string;
+  connectionType: "usb" | "bluetooth" | "pci" | "unknown";
+}
+
 export function generateFirmware(project: LinkPadProject) {
   return invoke<FirmwareGenerationResult>("generate_firmware", { project });
 }
@@ -54,6 +60,10 @@ export async function runFirmwareBuild(
 
 export function getToolchainStatus() {
   return invoke<ToolchainStatus>("get_toolchain_status");
+}
+
+export function listSerialPorts() {
+  return invoke<SerialPortDescriptor[]>("list_serial_ports");
 }
 
 export async function prepareToolchain(onProgress: (progress: ToolchainProgress) => void) {

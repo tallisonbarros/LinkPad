@@ -7,7 +7,7 @@ import type {
 import { createDefaultStatusOverlay, normalizeStatusOverlay } from "../runtime/statusOverlay";
 
 export const CURRENT_PROJECT_SCHEMA = "0.2.0" as const;
-export const CURRENT_STUDIO_VERSION = "0.5.0" as const;
+export const CURRENT_STUDIO_VERSION = "0.5.1" as const;
 
 export function createDefaultSimProfile(projectId: string): ProtocolProfile {
   return {

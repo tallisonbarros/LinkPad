@@ -40,11 +40,12 @@ src/data/connectorCatalog.ts
 src/domain/project/
 src/features/
 src-tauri/src/firmware.rs
+src-tauri/src/serial_ports.rs
 src-tauri/src/toolchain.rs
 src-tauri/templates/m5stickc-plus2/
 ```
 
-O shell original foi preservado. A versao `0.2.0` adicionou editores funcionais e gerador de runtime. A versao `0.3.0` acrescentou o manifesto/editor declarativo do `siemens-s7`. A versao `0.4.0` completa o gerenciador de perfis e o runtime multi-conectores. A versao `0.5.0` adiciona o overlay portatil de status orientado pelo manifesto de hardware, sem mudar o papel do Agent.
+O shell original foi preservado. A versao `0.2.0` adicionou editores funcionais e gerador de runtime. A versao `0.3.0` acrescentou o manifesto/editor declarativo do `siemens-s7`. A versao `0.4.0` completa o gerenciador de perfis e o runtime multi-conectores. A versao `0.5.0` adiciona o overlay portatil de status orientado pelo manifesto de hardware, sem mudar o papel do Agent. A versao `0.5.1` move a descoberta de portas seriais para o backend nativo e elimina a digitacao livre de `COMx` na interface.
 
 ## Fluxo Principal
 
@@ -151,6 +152,7 @@ test_agent_connection
 test_connector_connection
 generate_firmware
 run_firmware_build
+list_serial_ports
 get_toolchain_status
 prepare_toolchain
 ```
@@ -160,6 +162,8 @@ prepare_toolchain
 O build nunca resolve `pio` pelo `PATH`. O comando usa o executavel absoluto em `%LOCALAPPDATA%\LinkPadStudio\pio`, sincroniza o fonte gerado em `%LOCALAPPDATA%\LinkPadStudio\b\<id>` e copia os artefatos finais de volta para o projeto. O staging compacto evita falhas do toolchain ESP32 provocadas por caminhos longos no Windows.
 
 `run_firmware_build` tambem executa em uma tarefa bloqueante separada da thread da interface. A saida padrao e a saida de erro do PlatformIO sao lidas enquanto o processo esta ativo e convertidas em eventos `firmware-progress`, mantendo a janela responsiva durante compilacoes e gravacoes longas.
+
+`list_serial_ports` consulta o sistema operacional em uma tarefa bloqueante e devolve somente descritores de portas atualmente detectadas. O frontend preserva uma porta salva que esteja temporariamente ausente para diagnostico, mas nao permite iniciar `flash` ate que uma porta retornada por esse comando seja selecionada. Esse estado e configuracao local de deploy e nao afeta o runtime gerado.
 
 `test_connector_connection` executa em tarefa bloqueante, usa o cliente HTTP Rust e envia somente o target do perfil. Ele cria e encerra uma sessao LinkPad Protocol para validar o handshake do driver; nao recebe endereco de tag e nao chama leitura/escrita.
 

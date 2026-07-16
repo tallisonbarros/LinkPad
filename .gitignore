@@ -54,6 +54,10 @@ htmlcov/
 *.tmp
 *.spec.bak
 
+# A pasta abaixo contem codigo-fonte da tela de build, nao artefatos gerados
+!LinkPadStudioApp/src/features/build/
+!LinkPadStudioApp/src/features/build/**
+
 # Prototipos legados mantidos apenas como referencia local
 /App Exemplo Agente LinkPad/
 /App Exemplo M5Stick/

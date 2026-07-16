@@ -95,6 +95,20 @@ Compilacao e gravacao sao executadas fora da thread da interface. Enquanto o Pla
 
 A janela principal possui capability Tauri explicita para `core:event:allow-listen` e `core:event:allow-unlisten`. Essas permissoes sao necessarias para acompanhar `firmware-progress` e `toolchain-progress`; permissoes de emissao de eventos nao sao concedidas ao frontend.
 
+## Selecao da Porta Serial
+
+No Studio `0.5.1`, a porta de upload nao e digitada. Ao abrir a aba Build, o comando nativo `list_serial_ports` consulta as portas atualmente detectadas pelo sistema operacional e alimenta uma lista suspensa. O botao de atualizacao repete a consulta depois que um device e conectado ou removido.
+
+Regras do seletor:
+
+- se o projeto ainda nao possui porta e exatamente uma foi detectada, ela e selecionada automaticamente;
+- se a porta salva estiver desconectada, ela permanece visivel como `nao detectada` para explicar o estado do projeto;
+- uma porta ausente nunca habilita `Gravar device`;
+- compilar e gerar codigo continuam disponiveis sem porta serial;
+- o upload usa exatamente o valor detectado e selecionado no comando `pio run --target upload --upload-port COMx`.
+
+A descoberta depende do driver USB/serial do hardware estar instalado e do Windows reconhecer a porta. Se o device for conectado depois que a tela ja estiver aberta, o usuario deve clicar em atualizar.
+
 Observacao operacional:
 
 Se `cargo` nao for reconhecido apos instalar Rust, reinicie o PowerShell ou adicione temporariamente `C:\Users\<usuario>\.cargo\bin` ao PATH da sessao.
@@ -132,10 +146,11 @@ Implementacao `0.2.0`:
 - preparacao automatica da toolchain gerenciada;
 - execucao assincrona de compilacao/gravacao fora da thread da interface;
 - progresso e diagnostico incremental pelo evento `firmware-progress`;
+- descoberta nativa da porta e selecao somente entre devices detectados;
 - staging interno com identificador deterministico por caminho de projeto;
 - copia de binarios para `build/firmware/`;
 - log em `build/latest.log`;
-- porta serial informada explicitamente pelo usuario.
+- porta serial escolhida pelo usuario em uma lista fornecida pelo sistema operacional.
 
 ## Configuracoes
 
@@ -158,6 +173,7 @@ O Studio deve permitir configurar:
 - Builds devem ser reproduziveis.
 - Logs de build devem ser armazenados.
 - Falhas devem ter mensagem acionavel.
+- A gravacao nao deve iniciar com uma porta salva que nao esteja atualmente detectada.
 
 ## Futuro
 

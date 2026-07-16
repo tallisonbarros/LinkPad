@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.5.1 - 2026-07-16
+
+### Adicionado
+
+- Descoberta nativa de portas seriais pelo backend Tauri, com identificacao USB quando fornecida pelo sistema operacional.
+- Lista suspensa de portas detectadas e acao de atualizacao para hot-plug do device.
+- Ordenacao numerica de portas Windows (`COM2` antes de `COM10`) e testes unitarios do enumerador.
+- Excecao de versionamento para manter `src/features/build` no Git sem liberar diretorios de artefatos `build/`.
+
+### Alterado
+
+- A porta serial deixa de aceitar texto livre na aba Build.
+- Uma porta salva mas desconectada permanece visivel como diagnostico, porem a gravacao fica bloqueada ate a selecao de uma porta detectada.
+- Quando o projeto ainda nao possui porta e somente uma esta disponivel, o Studio a seleciona automaticamente.
+
+### Compatibilidade
+
+- `build.serialPort` permanece uma string e o schema de projeto continua `0.2.0`.
+- LinkPad Protocol e Agent nao foram alterados.
+- Device Runtime permanece `0.5.0`; somente o LinkPad Studio passa a `0.5.1`.
+- Instaladores nao foram reconstruidos nesta iteracao de desenvolvimento.
+
 ## 0.5.0 - 2026-07-16
 
 ### Adicionado

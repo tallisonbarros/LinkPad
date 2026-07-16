@@ -46,7 +46,7 @@ pub fn generate(project_dir: &Path, project: &Value) -> Result<PathBuf, String> 
     let runtime_project = runtime_project(project);
     let compact_json = serde_json::to_string(&runtime_project).map_err(error_text)?;
     let generated_header = format!(
-        "// Gerado pelo LinkPad Studio 0.5.0. Nao editar.\n#pragma once\n\nstatic const char LINKPAD_PROJECT_JSON[] = {};\n",
+        "// Gerado pelo LinkPad Studio 0.5.1. Nao editar.\n#pragma once\n\nstatic const char LINKPAD_PROJECT_JSON[] = {};\n",
         cpp_string_literal(&compact_json)
     );
 

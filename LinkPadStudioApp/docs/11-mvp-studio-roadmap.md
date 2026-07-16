@@ -59,6 +59,8 @@ Status: implementada no Studio `0.2.0` e ampliada no `0.4.0` para varias sessoes
 
 No Studio/runtime `0.5.0`, os estados permanentes de Wi-Fi e Agent passam a um overlay vetorial portatil, responsivo ao display e reproduzido no preview do editor.
 
+No Studio `0.5.1`, a gravacao deixa de depender da digitacao manual de `COMx`: a porta e escolhida entre as conexoes seriais detectadas pelo Windows, com atualizacao para devices conectados durante a sessao.
+
 ## Fase 5 - Integracao Completa
 
 ```text

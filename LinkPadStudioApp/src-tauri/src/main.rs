@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod firmware;
+mod serial_ports;
 mod toolchain;
 
 use serde_json::{json, Value};
@@ -293,6 +294,13 @@ async fn run_firmware_build(
 }
 
 #[tauri::command]
+async fn list_serial_ports() -> Result<Vec<serial_ports::SerialPortDescriptor>, String> {
+    tauri::async_runtime::spawn_blocking(serial_ports::list)
+        .await
+        .map_err(|error| format!("Falha ao listar as portas seriais: {error}"))?
+}
+
+#[tauri::command]
 fn get_toolchain_status() -> toolchain::ToolchainStatus {
     toolchain::status()
 }
@@ -318,6 +326,7 @@ fn main() {
             test_connector_connection,
             generate_firmware,
             run_firmware_build,
+            list_serial_ports,
             get_toolchain_status,
             prepare_toolchain
         ])

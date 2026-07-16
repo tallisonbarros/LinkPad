@@ -53,7 +53,7 @@ Todo arquivo `project.json` deve conter:
 ```json
 {
   "schemaVersion": "0.2.0",
-  "studioVersion": "0.5.0"
+  "studioVersion": "0.5.1"
 }
 ```
 
@@ -62,6 +62,8 @@ Todo arquivo `project.json` deve conter:
 O Studio `0.3.0` e o Agent `0.2.0` acrescentam o conector `siemens-s7`. O Studio e o Device Runtime `0.4.0` habilitam varios perfis simultaneos, mantendo uma sessao por `protocolProfileId`. O schema de projeto continua `0.2.0` e o LinkPad Protocol continua `0.1.0`, pois listas de perfis, `driver`, `endpoint`, `options`, `protocolProfileId`, `type` e `address` ja eram declarativos.
 
 O Studio e o Device Runtime `0.5.0` acrescentam o overlay portatil de status Wi-Fi/Agent ao descritor do hardware. A extensao e compativel e nao altera o schema do projeto nem o LinkPad Protocol.
+
+O Studio `0.5.1` substitui a digitacao livre da porta serial pela descoberta nativa das portas conectadas. A correcao e compativel: `build.serialPort` continua sendo uma string, o schema permanece `0.2.0` e o Device Runtime permanece `0.5.0`.
 
 O schema de configuracao local do Agent passa a `0.3.0`. Configuracoes `0.2.0` sao migradas automaticamente, com backup, para liberar `siemens-s7` quando ainda usam o whitelist default anterior.
 

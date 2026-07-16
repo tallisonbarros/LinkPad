@@ -102,7 +102,7 @@ export interface LinkPadWidget {
 
 export interface LinkPadProject {
   schemaVersion: "0.2.0";
-  studioVersion: "0.5.0";
+  studioVersion: "0.5.1";
   projectId: string;
   name: string;
   description: string;

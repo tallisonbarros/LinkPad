@@ -22,6 +22,8 @@ Nao sao versionados:
 
 Os arquivos permanecem no computador; o `.gitignore` apenas impede que sejam adicionados ao historico.
 
+A regra generica que ignora diretorios `build/` possui uma excecao explicita para `LinkPadStudioApp/src/features/build/`, pois esse caminho contem codigo-fonte da tela de compilacao e gravacao. Novas pastas-fonte nao devem receber nomes que coincidam com artefatos ignorados sem uma excecao equivalente e validada por `git status`.
+
 ## Branches
 
 - `main`: estado integrado e validado.
