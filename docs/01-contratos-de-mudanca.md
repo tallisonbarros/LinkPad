@@ -239,6 +239,35 @@ Data:
 
 2026-07-16
 
+## Decisao Arquitetural: Colaboracao Simultanea Orientada a Agentes
+
+Decisao:
+
+O repositorio usa `AGENTS.md` como contrato canonico de trabalho para agentes e `docs/05-fluxo-colaboracao.md` como processo operacional. Toda implementacao colaborativa ocorre fora da `main`, torna seu escopo visivel por branch publicada e Pull Request, integra a base atual antes da entrega e passa pela CI comum dos dois produtos.
+
+Contexto:
+
+O ritmo de desenvolvimento assistido por IA permite varias mudancas relevantes em paralelo. Apenas compartilhar comandos Git nao evita conflitos semanticos, divergencia de contratos ou a substituicao acidental do trabalho de outro colaborador.
+
+Alternativas consideradas:
+
+- Manter instrucoes informais fora do repositorio.
+- Concentrar toda integracao em uma branch longa.
+- Permitir que cada agente escolha livremente seu fluxo e seus testes.
+
+Consequencias:
+
+- Uma intencao curta pode ser expandida pelo agente a partir dos contratos versionados.
+- Branches curtas e publicadas cedo tornam trabalhos simultaneos visiveis.
+- Pull Requests e CI verificam a integracao antes da aprovacao humana.
+- Nenhum agente recebe autorizacao implicita para fazer merge automatico na `main`.
+- Mudancas relacionadas, mas fora do objetivo atual, devem virar continuacoes explicitas.
+- Scripts locais reduzem o trabalho mecanico, mas nao substituem revisao de arquitetura e produto.
+
+Data:
+
+2026-07-16
+
 ## Registro de Decisao
 
 Para decisoes arquiteturais relevantes, registre no documento de arquitetura aplicavel:
