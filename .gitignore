@@ -1,0 +1,59 @@
+# Sistema operacional e editores
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Configuracao local, projetos de usuario e segredos
+.env
+.env.*
+!.env.example
+**/.dev/
+*.local
+*.linkpad/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Python
+**/.venv/
+**/venv/
+**/__pycache__/
+**/*.py[cod]
+**/*.egg-info/
+**/.pytest_cache/
+**/.ruff_cache/
+**/.mypy_cache/
+.coverage
+htmlcov/
+
+# Node, Vite, Rust e Tauri
+**/node_modules/
+**/.vite/
+**/target/
+*.tsbuildinfo
+
+# PlatformIO e firmware gerado
+**/.pio/
+**/.pioenvs/
+**/.piolibdeps/
+*.elf
+*.map
+
+# Build, empacotamento e diagnostico local
+**/build/
+**/dist/
+**/dist_installer/
+*.log
+*.tmp
+*.spec.bak
+
+# Prototipos legados mantidos apenas como referencia local
+/App Exemplo Agente LinkPad/
+/App Exemplo M5Stick/

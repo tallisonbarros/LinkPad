@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "0.1.0",
+  "studioVersion": "0.1.0",
+  "projectId": "project-legacy",
+  "name": "Projeto legado",
+  "description": "Fixture para migracao",
+  "folderPath": "C:/Projetos/Projeto legado.linkpad",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "hardware": {
+    "hardwareId": "m5stickc-plus2",
+    "runtime": "arduino-esp32",
+    "orientation": "landscape"
+  },
+  "agent": {
+    "mode": "http",
+    "host": "192.168.0.10",
+    "port": 8008,
+    "timeoutMs": 1200,
+    "pollMs": 1000,
+    "token": ""
+  },
+  "tags": [
+    {
+      "name": "MotorSpeed",
+      "type": "float",
+      "direction": "read",
+      "source": "agent",
+      "agentTag": "Motor.Speed",
+      "quality": "unknown"
+    }
+  ],
+  "screens": [
+    {
+      "id": "screen-main",
+      "name": "Tela Principal",
+      "width": 240,
+      "height": 135,
+      "widgets": []
+    }
+  ],
+  "assets": {
+    "fonts": [],
+    "images": []
+  }
+}

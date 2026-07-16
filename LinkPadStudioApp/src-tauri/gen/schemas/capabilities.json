@@ -1,0 +1,1 @@
+{"main-events":{"identifier":"main-events","description":"Permite que a janela principal acompanhe eventos de progresso emitidos pelo backend.","local":true,"windows":["main"],"permissions":["core:event:allow-listen","core:event:allow-unlisten"]}}
