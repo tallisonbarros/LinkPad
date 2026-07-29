@@ -24,6 +24,18 @@ Os arquivos permanecem no computador; o `.gitignore` apenas impede que sejam adi
 
 A regra generica que ignora diretorios `build/` possui uma excecao explicita para `LinkPadStudioApp/src/features/build/`, pois esse caminho contem codigo-fonte da tela de compilacao e gravacao. Novas pastas-fonte nao devem receber nomes que coincidam com artefatos ignorados sem uma excecao equivalente e validada por `git status`.
 
+## Clone Reproduzivel
+
+O clone padrao deve partir da `main` integrada e conter todo codigo-fonte necessario. Depois de instalar Git, Python 3.11+, Node.js 24 e Rust/Cargo com os pre-requisitos do Tauri para Windows:
+
+```bat
+git clone https://github.com/tallisonbarros/LinkPad.git
+cd LinkPad
+setup-dev.cmd
+```
+
+O launcher raiz chama `scripts/validate-work.ps1 -All -Bootstrap` com politica restrita ao processo. Ele cria `.venv`, instala o Agent com extras `dev,windows`, executa `npm ci` e roda as suites Python, TypeScript/UI e Rust. Nenhuma dependencia ou configuracao local e versionada. O Studio e o Agent podem entao ser iniciados por seus respectivos `run-dev.cmd`.
+
 ## Branches
 
 - `main`: estado integrado e validado.
@@ -32,7 +44,7 @@ A regra generica que ignora diretorios `build/` possui uma excecao explicita par
 - `docs/<assunto>`: documentacao sem mudanca de comportamento.
 - `studio/<assunto>`, `agent/<assunto>`, `runtime/<assunto>`, `driver/<assunto>`, `contract/<assunto>`, `build/<assunto>` e `security/<assunto>`: mudancas alinhadas aos tipos da governanca.
 
-Branches devem ser curtas, publicadas cedo e integradas somente por Pull Request. Antes do merge, codigo, contratos, Markdown e CI devem estar coerentes. O processo operacional esta em `docs/05-fluxo-colaboracao.md`.
+Para trabalho paralelo ou revisao remota, branches devem ser curtas, publicadas cedo e integradas somente por Pull Request. Em uma linha local sequencial, o proprietario pode manter a branch de trabalho atual e publicar um conjunto coerente depois. Antes de qualquer merge na `main`, codigo, contratos, Markdown e CI devem estar coerentes. O processo operacional esta em `docs/05-fluxo-colaboracao.md`.
 
 O comando recomendado para iniciar uma tarefa e:
 
@@ -96,8 +108,8 @@ No GitHub, recomenda-se proteger a `main` com Pull Request obrigatorio, checks o
 Studio e Agent possuem versoes independentes. Quando houver um instalador validado, use tags com o produto no nome:
 
 ```text
-studio-v0.5.0
-agent-v0.2.0
+studio-v0.9.0
+agent-v0.3.0
 ```
 
 Uma tag de release deve apontar para um commit que atualize o `CHANGELOG.md` do produto e tenha o fluxo de build correspondente validado.

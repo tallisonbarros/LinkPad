@@ -33,22 +33,25 @@ Exemplo inicial:
       "id": "primary",
       "label": "Botao A",
       "kind": "button",
-      "events": ["press"],
+      "events": ["press", "longPress"],
+      "deviceActions": [],
       "configurable": true
     },
     {
       "id": "secondary",
       "label": "Botao B",
       "kind": "button",
-      "events": ["press"],
+      "events": ["press", "longPress"],
+      "deviceActions": [],
       "configurable": true
     },
     {
       "id": "power",
       "label": "Power",
       "kind": "button",
-      "events": [],
-      "configurable": false
+      "events": ["press", "longPress"],
+      "deviceActions": ["powerOff"],
+      "configurable": true
     }
   ],
   "network": ["wifi"],
@@ -56,7 +59,8 @@ Exemplo inicial:
   "capabilities": {
     "battery": true,
     "buzzer": true,
-    "imu": true
+    "imu": true,
+    "powerOff": true
   }
 }
 ```
@@ -64,6 +68,8 @@ Exemplo inicial:
 ## Capacidades
 
 O Studio deve usar capacidades para liberar ou bloquear recursos.
+
+Seleção de dados não pertence ao manifesto de hardware. Todo hardware usa o mesmo `DataBindingField`; o manifesto pode limitar widgets e interações disponíveis, mas nunca redefine as abas PLC/Tags globais ou os formulários de endereço.
 
 Exemplos:
 
@@ -75,11 +81,13 @@ Exemplos:
 
 ## Entradas e Controles
 
-`inputs` nao contem nomes de APIs de bibliotecas. Cada item declara um identificador logico estavel, rotulo de interface, tipo de controle, eventos normalizados e se o projeto pode configura-lo. Tipos previstos: `button`, `encoder`, `key` e `touch`. Eventos previstos: `press`, `longPress`, `doublePress`, `rotateLeft` e `rotateRight`.
+`inputs` nao contem nomes de APIs de bibliotecas. Cada item declara um identificador logico estavel, rotulo de interface, tipo de controle, eventos normalizados, acoes especiais de dispositivo e se o projeto pode configura-lo. Tipos previstos: `button`, `encoder`, `key` e `touch`. Eventos previstos: `press`, `longPress`, `doublePress`, `rotateLeft` e `rotateRight`.
 
 O Studio deve renderizar somente os controles e eventos do manifesto. O template do hardware converte sua API fisica nesses identificadores; por exemplo, o adaptador M5 converte `M5.BtnA` em `primary/press`. Um projeto nunca salva `M5.BtnA`, pino GPIO ou chamada de biblioteca em `screens.json`.
 
-Um controle com `configurable: false` pode aparecer para diagnostico, mas nao aceita vinculos. No M5StickC Plus2, Power fica reservado ate que o runtime ofereca um evento seguro e validado.
+Um controle com `configurable: false` pode aparecer para diagnostico, mas nao aceita vinculos. `deviceActions` restringe acoes especiais por entrada sem limitar navegacao, interface ou dados. Para oferecer `powerOff`, o hardware precisa declarar `capabilities.powerOff: true` e a entrada precisa incluir `powerOff` em `deviceActions`.
+
+No M5StickC Plus2, A, B e Power sao configuraveis e oferecem `press` e `longPress`, mas somente Power declara `deviceActions: ["powerOff"]`. A e B nao exibem a acao Desligar. Essa regra vem integralmente do manifesto; a interface nao testa o nome `power` nem conhece a API M5.
 
 ## Overlay de Status
 
@@ -90,6 +98,18 @@ O estilo `watermark` e uma camada nao interativa renderizada depois dos widgets.
 ## Primeiro Hardware
 
 O primeiro alvo e `m5stickc-plus2`.
+
+Estado implementado:
+
+| Capacidade | M5StickC Plus2 |
+| --- | --- |
+| Template/runtime | Arduino ESP32 compilado |
+| Display | 240x135 colorido, sem touch |
+| Entradas | A/B/Power com `press` e `longPress` |
+| Status permanente | overlay vetorial Wi-Fi/Agent |
+| Rede | Wi-Fi |
+| Retencao | NVS via `Preferences` |
+| Build/deploy | PlatformIO gerenciado e porta serial detectada |
 
 O exemplo existente deve ser usado como referencia para:
 
@@ -110,3 +130,18 @@ Adicionar familias:
 - ESP32 customizado.
 - Painel industrial Linux.
 - Gateway sem tela.
+
+## Contrato Para o Segundo Hardware
+
+O proximo hardware deve ser adicionado sem duplicar editores ou modelos de projeto. A entrega minima inclui:
+
+- manifesto com display, entradas, rede, storage e capacidades;
+- template/runtime e renderer compativeis;
+- renderer dos sete widgets comuns (`static_text`, `tag_value`, `boolean_indicator`, `status_indicator`, `write_button`, `gauge`, `progress_bar`) e adaptacao do estilo logico do schema `0.9.0`;
+- adaptador de entradas que emita eventos logicos;
+- implementacao de `powerOff` somente quando a capacidade for anunciada pelo hardware e autorizada em `input.deviceActions`;
+- backend de retencao para Tags internas quando `storage` oferecer persistencia;
+- definicao do `statusOverlay` apropriado ao display;
+- teste de geracao e compilacao real.
+
+Widgets exclusivos, touch avancado, sensores e recursos cosmeticos podem ser entregas posteriores. A primeira meta e comprovar que telas, `DataBinding`, controles e Tags retentivas nao dependem do M5Stick. O plano compartilhado fica em `../../docs/06-estado-atual-e-proximos-passos.md`.

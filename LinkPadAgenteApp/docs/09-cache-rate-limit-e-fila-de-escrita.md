@@ -36,3 +36,21 @@ Drivers futuros podem exigir serializacao por conexao. Essa fila deve preservar 
 - fechamento ocioso e shutdown retiram entradas sob lock e desconectam fora do lock global.
 
 Essa separacao e necessaria para que um teste de conector ou PLC offline nao interrompa leituras de sessoes ja ativas.
+
+## Concorrencia OPC UA em 0.3.0
+
+- `asyncua` opera de forma assincrona no loop do Agent;
+- cada conexao possui lock proprio para preservar sessao e cache de NodeIds/tipos;
+- sessoes equivalentes podem compartilhar a conexao;
+- leitura pode substituir a conexao e repetir uma vez depois de falha de transporte;
+- escrita nunca e repetida e so conclui depois da releitura.
+
+## Prioridade de Robustez
+
+1. metricas e limites por device/sessao/target;
+2. cache de leitura com idade/qualidade explicitas;
+3. timeout de confirmacao realmente aplicado pelo core/driver;
+4. auditoria de escrita sem expor segredos;
+5. testes de carga, cancelamento e shutdown com varios PLCs.
+
+Fila persistente nao e prioridade do MVP: uma escrita industrial ambigua nao pode ser repetida depois de reinicio sem uma politica de aplicacao explicita.

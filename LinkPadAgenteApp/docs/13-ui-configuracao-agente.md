@@ -58,3 +58,14 @@ Zero sessoes e um estado normal.
 - configurar polling do projeto;
 - salvar perfil por cliente/planta;
 - receber configuracao do Studio.
+
+## Evolucao Permitida da UI
+
+A bandeja ou uma pagina local futura pode administrar somente o proprio Agent:
+
+- token e redes/drivers permitidos;
+- certificados, trust store e identidades protegidas;
+- nivel de log e exportacao de diagnostico;
+- status de sessoes/conexoes e operacoes de servico.
+
+Mesmo com essas evolucoes, nao deve haver cadastro de PLC, Tag global, tela, polling ou projeto. Browse/teste de ponto pertence ao fluxo de engenharia do Studio e usa sessoes efemeras.

@@ -260,7 +260,7 @@ where
     let client = reqwest::blocking::Client::builder()
         .connect_timeout(Duration::from_secs(20))
         .timeout(Duration::from_secs(300))
-        .user_agent("LinkPadStudio/0.6.0")
+        .user_agent("LinkPadStudio/0.17.1")
         .build()
         .map_err(error_text)?;
     let mut response = client.get(url).send().map_err(error_text)?;

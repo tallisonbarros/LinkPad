@@ -13,6 +13,7 @@ from typing import AsyncIterator
 from linkpad_agent import __version__
 from linkpad_agent.config import AgentConfig
 from linkpad_agent.drivers.base import DriverError
+from linkpad_agent.drivers.opcua import OpcUaDriver
 from linkpad_agent.drivers.registry import DriverRegistry
 from linkpad_agent.drivers.siemens_s7 import SiemensS7Driver
 from linkpad_agent.drivers.sim import SimDriver
@@ -55,6 +56,7 @@ class AgentRuntime:
         self.registry = DriverRegistry()
         self.registry.register(SimDriver())
         self.registry.register(SiemensS7Driver())
+        self.registry.register(OpcUaDriver())
         self.pool = ConnectionPool(config.limits.idle_connection_ttl_seconds)
         self.sessions = SessionManager(
             registry=self.registry,

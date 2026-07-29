@@ -106,11 +106,12 @@ if ($runAgent) {
     }
     if ($Bootstrap) {
         Invoke-Native -FilePath $agentPython -Arguments @("-m", "pip", "install", "--upgrade", "pip") -WorkingDirectory $agentDir
-        Invoke-Native -FilePath $agentPython -Arguments @("-m", "pip", "install", "-e", ".[dev]") -WorkingDirectory $agentDir
+        Invoke-Native -FilePath $agentPython -Arguments @("-m", "pip", "install", "-e", ".[dev,windows]") -WorkingDirectory $agentDir
     }
 
     Write-Host "Executando Agent / Python tests..."
-    Invoke-Native -FilePath $agentPython -Arguments @("-m", "pytest", "-q") -WorkingDirectory $agentDir
+    New-Item -ItemType Directory -Path (Join-Path $agentDir ".dev") -Force | Out-Null
+    Invoke-Native -FilePath $agentPython -Arguments @("-m", "pytest", "-q", "--basetemp", ".dev\pytest") -WorkingDirectory $agentDir
 }
 
 if ($runStudio) {

@@ -2,6 +2,7 @@ use crate::toolchain;
 use serde::Serialize;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::{BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
@@ -48,7 +49,7 @@ pub fn generate(project_dir: &Path, project: &Value) -> Result<PathBuf, String> 
     let runtime_project = runtime_project(project);
     let compact_json = serde_json::to_string(&runtime_project).map_err(error_text)?;
     let generated_header = format!(
-        "// Gerado pelo LinkPad Studio 0.6.0. Nao editar.\n#pragma once\n\nstatic const char LINKPAD_PROJECT_JSON[] = {};\n",
+        "// Gerado pelo LinkPad Studio 0.17.1. Nao editar.\n#pragma once\n\nstatic const char LINKPAD_PROJECT_JSON[] = {};\n",
         cpp_string_literal(&compact_json)
     );
 
@@ -72,6 +73,7 @@ pub fn generate(project_dir: &Path, project: &Value) -> Result<PathBuf, String> 
 
 pub fn build<F>(
     project_dir: &Path,
+    project: &Value,
     flash: bool,
     serial_port: &str,
     mut progress: F,
@@ -79,16 +81,13 @@ pub fn build<F>(
 where
     F: FnMut(FirmwareProgress),
 {
+    let firmware_dir = generate_for_build(project_dir, project, &mut progress)?;
     emit_progress(
         &mut progress,
         "preparing",
         "Preparando os arquivos do firmware...",
         2,
     );
-    let firmware_dir = project_dir.join("generated").join("m5stickc-plus2");
-    if !firmware_dir.join("platformio.ini").exists() {
-        return Err("Gere o firmware antes de compilar.".to_string());
-    }
 
     let staging_dir = toolchain::build_cache_root().join(staging_id(project_dir));
     sync_directory(&firmware_dir, &staging_dir)?;
@@ -165,6 +164,23 @@ where
     }))
 }
 
+fn generate_for_build<F>(
+    project_dir: &Path,
+    project: &Value,
+    progress: &mut F,
+) -> Result<PathBuf, String>
+where
+    F: FnMut(FirmwareProgress),
+{
+    emit_progress(
+        progress,
+        "generating",
+        "Gerando o codigo do projeto...",
+        1,
+    );
+    generate(project_dir, project)
+}
+
 fn staging_id(project_dir: &Path) -> String {
     let digest = Sha256::digest(project_dir.to_string_lossy().as_bytes());
     format!("{:x}", digest)[..12].to_string()
@@ -210,8 +226,9 @@ fn copy_build_artifacts(staging_dir: &Path, log_dir: &Path) -> Result<(), String
 }
 
 fn runtime_project(project: &Value) -> Value {
+    let (tags, screens) = compile_data_bindings(project);
     json!({
-        "runtimeVersion": "0.6.0",
+        "runtimeVersion": "0.12.1",
         "hardwareId": project.pointer("/hardware/hardwareId").cloned().unwrap_or(json!("m5stickc-plus2")),
         "contractVersion": project.pointer("/agent/protocolVersion").cloned().unwrap_or(json!("0.1.0")),
         "deviceId": project.get("projectId").cloned().unwrap_or(json!("linkpad-device")),
@@ -227,9 +244,345 @@ fn runtime_project(project: &Value) -> Value {
             }))
         },
         "protocols": project.get("protocols").cloned().unwrap_or(json!([])),
-        "tags": project.get("tags").cloned().unwrap_or(json!([])),
-        "screens": project.get("screens").cloned().unwrap_or(json!([]))
+        "tags": tags,
+        "screens": screens
     })
+}
+
+fn compile_data_bindings(project: &Value) -> (Value, Value) {
+    let project_tags = project
+        .get("tags")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let global_names: HashMap<String, String> = project_tags
+        .iter()
+        .filter_map(|tag| {
+            Some((
+                tag.get("id")?.as_str()?.to_string(),
+                tag.get("name")?.as_str()?.to_string(),
+            ))
+        })
+        .collect();
+    let mut screens = project
+        .get("screens")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let referenced_global_ids = referenced_global_tag_ids(&screens);
+    let mut tags = project_tags
+        .into_iter()
+        .filter(|tag| {
+            tag.get("id")
+                .and_then(Value::as_str)
+                .is_some_and(|tag_id| referenced_global_ids.contains(tag_id))
+        })
+        .collect::<Vec<_>>();
+    let mut direct_indexes: HashMap<String, usize> = HashMap::new();
+
+    for screen in &mut screens {
+        let Some(screen_object) = screen.as_object_mut() else {
+            continue;
+        };
+        if let Some(widgets) = screen_object
+            .get_mut("widgets")
+            .and_then(Value::as_array_mut)
+        {
+            for widget in widgets {
+                if let Some(widget_object) = widget.as_object_mut() {
+                    widget_object.remove("editor");
+                }
+                let widget_type = widget.get("type").and_then(Value::as_str).unwrap_or("");
+                let direction = match widget_type {
+                    "tag_value" | "boolean_indicator" | "gauge" | "progress_bar" => Some("read"),
+                    "write_button" => Some("write"),
+                    _ => None,
+                };
+                let Some(direction) = direction else {
+                    continue;
+                };
+                let binding = widget.pointer("/props/binding").cloned();
+                let Some(binding) = binding else {
+                    continue;
+                };
+                let limits = widget.get("props").cloned().unwrap_or_else(|| json!({}));
+                let label = runtime_binding_label(&binding, &global_names);
+                let resolved = resolve_data_binding(
+                    &binding,
+                    direction,
+                    &limits,
+                    &global_names,
+                    &mut tags,
+                    &mut direct_indexes,
+                );
+                if let Some(props) = widget.get_mut("props").and_then(Value::as_object_mut) {
+                    props.remove("binding");
+                    props.insert("tag".to_string(), json!(resolved.unwrap_or_default()));
+                    props.insert("label".to_string(), json!(label));
+                }
+            }
+        }
+        if let Some(input_bindings) = screen_object
+            .get_mut("inputBindings")
+            .and_then(Value::as_array_mut)
+        {
+            for input_binding in input_bindings {
+                let Some(action) = input_binding.get_mut("action") else {
+                    continue;
+                };
+                let action_type = action.get("type").and_then(Value::as_str).unwrap_or("");
+                let direction = match action_type {
+                    "changeValue" => Some(
+                        if action
+                            .get("operation")
+                            .and_then(Value::as_str)
+                            .unwrap_or("set")
+                            == "set"
+                        {
+                            "write"
+                        } else {
+                            "readWrite"
+                        },
+                    ),
+                    _ => None,
+                };
+                let Some(direction) = direction else {
+                    continue;
+                };
+                let binding = action.get("binding").cloned();
+                let Some(binding) = binding else {
+                    continue;
+                };
+                let limits = action.clone();
+                let resolved = resolve_data_binding(
+                    &binding,
+                    direction,
+                    &limits,
+                    &global_names,
+                    &mut tags,
+                    &mut direct_indexes,
+                );
+                if let Some(action_object) = action.as_object_mut() {
+                    action_object.remove("binding");
+                    action_object.insert("tag".to_string(), json!(resolved.unwrap_or_default()));
+                }
+            }
+        }
+    }
+
+    (Value::Array(tags), Value::Array(screens))
+}
+
+fn referenced_global_tag_ids(screens: &[Value]) -> HashSet<String> {
+    let mut referenced = HashSet::new();
+    for screen in screens {
+        if let Some(widgets) = screen.get("widgets").and_then(Value::as_array) {
+            for widget in widgets {
+                collect_global_tag_id(widget.pointer("/props/binding"), &mut referenced);
+            }
+        }
+        if let Some(input_bindings) = screen.get("inputBindings").and_then(Value::as_array) {
+            for input_binding in input_bindings {
+                collect_global_tag_id(input_binding.pointer("/action/binding"), &mut referenced);
+            }
+        }
+    }
+    referenced
+}
+
+fn collect_global_tag_id(binding: Option<&Value>, referenced: &mut HashSet<String>) {
+    let Some(binding) = binding else {
+        return;
+    };
+    if binding.get("kind").and_then(Value::as_str) != Some("global-tag") {
+        return;
+    }
+    if let Some(tag_id) = binding.get("tagId").and_then(Value::as_str) {
+        referenced.insert(tag_id.to_string());
+    }
+}
+
+fn runtime_binding_label(binding: &Value, global_names: &HashMap<String, String>) -> String {
+    if binding.get("kind").and_then(Value::as_str) == Some("global-tag") {
+        return binding
+            .get("tagId")
+            .and_then(Value::as_str)
+            .and_then(|tag_id| global_names.get(tag_id))
+            .cloned()
+            .unwrap_or_default();
+    }
+    let Some(address) = binding.get("address") else {
+        return String::new();
+    };
+    if address.get("area").and_then(Value::as_str) == Some("DB") {
+        let db = address
+            .get("dbNumber")
+            .and_then(Value::as_i64)
+            .unwrap_or_default();
+        let byte = address
+            .get("byteOffset")
+            .and_then(Value::as_i64)
+            .unwrap_or_default();
+        return match address
+            .get("dataType")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+        {
+            "BOOL" => format!(
+                "DB{db}.DBX{byte}.{}",
+                address
+                    .get("bitOffset")
+                    .and_then(Value::as_i64)
+                    .unwrap_or_default()
+            ),
+            "INT" => format!("DB{db}.DBW{byte}"),
+            _ => format!("DB{db}.DBD{byte}"),
+        };
+    }
+    for field in ["key", "tag", "nodeId", "register", "symbol"] {
+        if let Some(value) = address.get(field) {
+            return value
+                .as_str()
+                .map(str::to_string)
+                .unwrap_or_else(|| value.to_string());
+        }
+    }
+    canonical_json(address)
+}
+
+fn resolve_data_binding(
+    binding: &Value,
+    direction: &str,
+    consumer_limits: &Value,
+    global_names: &HashMap<String, String>,
+    tags: &mut Vec<Value>,
+    direct_indexes: &mut HashMap<String, usize>,
+) -> Option<String> {
+    match binding.get("kind").and_then(Value::as_str)? {
+        "global-tag" => {
+            let name = global_names.get(binding.get("tagId")?.as_str()?)?.clone();
+            if let Some(point) = tags
+                .iter_mut()
+                .find(|tag| tag.get("name").and_then(Value::as_str) == Some(name.as_str()))
+            {
+                merge_numeric_limit(point, consumer_limits, "min", f64::max);
+                merge_numeric_limit(point, consumer_limits, "max", f64::min);
+            }
+            Some(name)
+        }
+        "connector" => {
+            let profile_id = binding.get("protocolProfileId")?.as_str()?;
+            let value_type = binding.get("type")?.as_str()?;
+            let address = binding.get("address")?;
+            let key = format!("{profile_id}:{value_type}:{}", canonical_json(address));
+            if let Some(index) = direct_indexes.get(&key).copied() {
+                merge_direct_point(&mut tags[index], direction, binding);
+                merge_numeric_limit(&mut tags[index], consumer_limits, "min", f64::max);
+                merge_numeric_limit(&mut tags[index], consumer_limits, "max", f64::min);
+                return tags[index]
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .map(str::to_string);
+            }
+
+            let digest = Sha256::digest(key.as_bytes());
+            let point_name = format!("__direct_{}", &format!("{digest:x}")[..12]);
+            let mut point = json!({
+                "name": point_name,
+                "type": value_type,
+                "direction": direction,
+                "source": "agent",
+                "protocolProfileId": profile_id,
+                "address": address,
+                "pollMs": binding.get("pollMs").cloned().unwrap_or(json!(1000)),
+                "quality": "unknown"
+            });
+            copy_optional_number(binding, &mut point, "min");
+            copy_optional_number(binding, &mut point, "max");
+            merge_numeric_limit(&mut point, consumer_limits, "min", f64::max);
+            merge_numeric_limit(&mut point, consumer_limits, "max", f64::min);
+            tags.push(point);
+            direct_indexes.insert(key, tags.len() - 1);
+            Some(point_name)
+        }
+        _ => None,
+    }
+}
+
+fn merge_direct_point(point: &mut Value, direction: &str, binding: &Value) {
+    let existing_direction = point
+        .get("direction")
+        .and_then(Value::as_str)
+        .unwrap_or("read");
+    let merged_direction = if existing_direction == direction {
+        existing_direction
+    } else {
+        "readWrite"
+    };
+    point["direction"] = json!(merged_direction);
+
+    if let Some(incoming_poll) = binding.get("pollMs").and_then(Value::as_u64) {
+        let current_poll = point
+            .get("pollMs")
+            .and_then(Value::as_u64)
+            .unwrap_or(incoming_poll);
+        point["pollMs"] = json!(current_poll.min(incoming_poll));
+    }
+    merge_numeric_limit(point, binding, "min", f64::max);
+    merge_numeric_limit(point, binding, "max", f64::min);
+}
+
+fn merge_numeric_limit(
+    point: &mut Value,
+    binding: &Value,
+    field: &str,
+    merge: fn(f64, f64) -> f64,
+) {
+    let Some(incoming) = binding.get(field).and_then(Value::as_f64) else {
+        return;
+    };
+    let value = point
+        .get(field)
+        .and_then(Value::as_f64)
+        .map(|current| merge(current, incoming))
+        .unwrap_or(incoming);
+    point[field] = json!(value);
+}
+
+fn copy_optional_number(source: &Value, target: &mut Value, field: &str) {
+    if let Some(value) = source.get(field).and_then(Value::as_f64) {
+        target[field] = json!(value);
+    }
+}
+
+fn canonical_json(value: &Value) -> String {
+    match value {
+        Value::Object(object) => {
+            let mut keys: Vec<&String> = object.keys().collect();
+            keys.sort();
+            let fields = keys
+                .into_iter()
+                .map(|key| {
+                    format!(
+                        "{}:{}",
+                        serde_json::to_string(key).unwrap_or_default(),
+                        canonical_json(&object[key])
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(",");
+            format!("{{{fields}}}")
+        }
+        Value::Array(items) => format!(
+            "[{}]",
+            items
+                .iter()
+                .map(canonical_json)
+                .collect::<Vec<_>>()
+                .join(",")
+        ),
+        _ => serde_json::to_string(value).unwrap_or_default(),
+    }
 }
 
 fn cpp_string_literal(value: &str) -> String {
@@ -443,7 +796,15 @@ mod tests {
             "agent": { "protocolVersion": "0.1.0" },
             "protocols": [],
             "tags": [],
-            "screens": []
+            "screens": [{
+                "id": "main",
+                "widgets": [{
+                    "id": "label",
+                    "type": "static_text",
+                    "editor": { "locked": true, "groupId": "group-1" },
+                    "props": {}
+                }]
+            }]
         });
         let runtime = runtime_project(&project);
         assert!(runtime.get("name").is_none());
@@ -453,6 +814,320 @@ mod tests {
             runtime["ui"]["statusOverlay"]["indicators"],
             json!(["wifi", "agent"])
         );
+        assert_eq!(runtime["runtimeVersion"], "0.12.1");
+        assert!(runtime["screens"][0]["widgets"][0].get("editor").is_none());
+    }
+
+    #[test]
+    fn keeps_internal_retentive_tags_outside_agent_sessions() {
+        let project = json!({
+            "projectId": "p-local",
+            "network": {},
+            "agent": { "protocolVersion": "0.1.0" },
+            "protocols": [],
+            "tags": [{
+                "id": "global-counter",
+                "name": "Counter",
+                "type": "int",
+                "direction": "readWrite",
+                "source": "internal",
+                "initialValue": 3,
+                "retentive": true,
+                "quality": "good"
+            }],
+            "screens": [{
+                "id": "main",
+                "widgets": [{
+                    "id": "counter-value",
+                    "type": "tag_value",
+                    "props": { "binding": { "kind": "global-tag", "tagId": "global-counter" } }
+                }],
+                "inputBindings": [{
+                    "inputId": "primary",
+                    "event": "press",
+                    "action": {
+                        "type": "changeValue",
+                        "binding": { "kind": "global-tag", "tagId": "global-counter" },
+                        "operation": "set",
+                        "operand": 4,
+                        "min": 0,
+                        "max": 10
+                    }
+                }]
+            }]
+        });
+
+        let runtime = runtime_project(&project);
+        let tag = &runtime["tags"][0];
+        assert_eq!(tag["source"], "internal");
+        assert_eq!(tag["initialValue"], 3);
+        assert_eq!(tag["retentive"], true);
+        assert!(tag.get("protocolProfileId").is_none());
+        assert!(tag.get("address").is_none());
+        assert_eq!(tag["min"], 0.0);
+        assert_eq!(tag["max"], 10.0);
+        assert_eq!(
+            runtime["screens"][0]["widgets"][0]["props"]["tag"],
+            "Counter"
+        );
+        assert_eq!(
+            runtime["screens"][0]["inputBindings"][0]["action"]["tag"],
+            "Counter"
+        );
+    }
+
+    #[test]
+    fn omits_unused_global_tags_from_the_embedded_runtime() {
+        let project = json!({
+            "projectId": "p-pruned-tags",
+            "network": {},
+            "agent": { "protocolVersion": "0.1.0" },
+            "protocols": [{ "id": "s7-main", "driver": "siemens-s7", "enabled": true }],
+            "tags": [{
+                "id": "global-used",
+                "name": "Used",
+                "type": "bool",
+                "direction": "readWrite",
+                "source": "agent",
+                "protocolProfileId": "s7-main",
+                "address": { "area": "DB", "dbNumber": 2, "byteOffset": 2, "bitOffset": 0, "dataType": "BOOL" },
+                "quality": "unknown"
+            }, {
+                "id": "global-unused",
+                "name": "UnusedInvalidAddress",
+                "type": "float",
+                "direction": "read",
+                "source": "agent",
+                "protocolProfileId": "s7-main",
+                "address": { "area": "DB", "dbNumber": 999, "byteOffset": 4, "dataType": "REAL" },
+                "quality": "unknown"
+            }],
+            "screens": [{
+                "id": "main",
+                "widgets": [{
+                    "id": "used-value",
+                    "type": "tag_value",
+                    "props": { "binding": { "kind": "global-tag", "tagId": "global-used" } }
+                }],
+                "inputBindings": [{
+                    "inputId": "primary",
+                    "event": "press",
+                    "action": {
+                        "type": "changeValue",
+                        "binding": { "kind": "global-tag", "tagId": "global-used" },
+                        "operation": "toggle"
+                    }
+                }]
+            }]
+        });
+
+        let runtime = runtime_project(&project);
+        let tags = runtime["tags"].as_array().unwrap();
+        assert_eq!(tags.len(), 1);
+        assert_eq!(tags[0]["name"], "Used");
+        assert_eq!(tags[0]["direction"], "readWrite");
+        assert!(tags
+            .iter()
+            .all(|tag| tag.get("name").and_then(Value::as_str) != Some("UnusedInvalidAddress")));
+    }
+
+    #[test]
+    fn keeps_opcua_as_a_generic_agent_descriptor() {
+        let project = json!({
+            "projectId": "p-opcua",
+            "network": {},
+            "agent": { "protocolVersion": "0.1.0" },
+            "protocols": [{
+                "id": "opc-main",
+                "name": "PLC OPC UA",
+                "driver": "opcua",
+                "endpoint": "opc.tcp://192.168.0.10:4840",
+                "enabled": true,
+                "options": {
+                    "securityPolicy": "None",
+                    "securityMode": "None",
+                    "sessionTimeoutMs": 30000,
+                    "requestTimeoutMs": 2000
+                },
+                "auth": { "mode": "anonymous" }
+            }],
+            "tags": [],
+            "screens": [{
+                "id": "main",
+                "widgets": [{
+                    "id": "opc-value",
+                    "type": "tag_value",
+                    "props": { "binding": {
+                        "kind": "connector",
+                        "protocolProfileId": "opc-main",
+                        "type": "float",
+                        "address": { "nodeId": "ns=3;s=Motor.Speed" },
+                        "pollMs": 500
+                    }}
+                }],
+                "inputBindings": []
+            }]
+        });
+
+        let runtime = runtime_project(&project);
+        assert_eq!(runtime["protocols"][0]["driver"], "opcua");
+        assert_eq!(
+            runtime["protocols"][0]["endpoint"],
+            "opc.tcp://192.168.0.10:4840"
+        );
+        assert_eq!(
+            runtime["tags"][0]["address"]["nodeId"],
+            "ns=3;s=Motor.Speed"
+        );
+        assert_eq!(runtime["tags"][0]["protocolProfileId"], "opc-main");
+        assert_eq!(
+            runtime["screens"][0]["widgets"][0]["props"]["label"],
+            "ns=3;s=Motor.Speed"
+        );
+    }
+
+    #[test]
+    fn compiles_global_and_direct_bindings_into_runtime_points() {
+        let direct_read = json!({
+            "kind": "connector",
+            "protocolProfileId": "s7-main",
+            "type": "float",
+            "address": { "area": "DB", "dbNumber": 10, "byteOffset": 4, "dataType": "REAL" },
+            "pollMs": 500,
+            "simulationValue": 12.5
+        });
+        let direct_write = json!({
+            "kind": "connector",
+            "protocolProfileId": "s7-main",
+            "type": "float",
+            "address": { "dataType": "REAL", "byteOffset": 4, "dbNumber": 10, "area": "DB" },
+            "pollMs": 1000
+        });
+        let project = json!({
+            "projectId": "p1",
+            "network": {},
+            "agent": { "protocolVersion": "0.1.0" },
+            "protocols": [{ "id": "s7-main", "driver": "siemens-s7", "enabled": true }],
+            "tags": [{
+                "id": "global-enabled",
+                "name": "Enabled",
+                "type": "bool",
+                "direction": "readWrite",
+                "source": "agent",
+                "protocolProfileId": "s7-main",
+                "address": { "area": "DB", "dbNumber": 10, "byteOffset": 0, "bitOffset": 0, "dataType": "BOOL" },
+                "quality": "unknown"
+            }, {
+                "id": "global-setpoint",
+                "name": "Setpoint",
+                "type": "float",
+                "direction": "readWrite",
+                "source": "agent",
+                "protocolProfileId": "s7-main",
+                "address": { "area": "DB", "dbNumber": 10, "byteOffset": 8, "dataType": "REAL" },
+                "quality": "unknown"
+            }],
+            "screens": [{
+                "id": "main",
+                "widgets": [
+                    { "id": "read", "type": "tag_value", "props": { "binding": direct_read } },
+                    { "id": "write", "type": "write_button", "props": { "binding": direct_write, "value": 42, "min": 0, "max": 100 } },
+                    { "id": "global", "type": "boolean_indicator", "props": { "binding": { "kind": "global-tag", "tagId": "global-enabled" } } },
+                    { "id": "gauge", "type": "gauge", "props": { "binding": { "kind": "global-tag", "tagId": "global-setpoint" }, "min": 0, "max": 100 } }
+                ],
+                "inputBindings": [{
+                    "inputId": "primary",
+                    "event": "press",
+                    "action": { "type": "changeValue", "binding": { "kind": "global-tag", "tagId": "global-enabled" }, "operation": "toggle" }
+                }, {
+                    "inputId": "primary",
+                    "event": "press",
+                    "action": { "type": "changeValue", "binding": { "kind": "global-tag", "tagId": "global-setpoint" }, "operation": "add", "operand": 5, "min": 5, "max": 50 }
+                }, {
+                    "inputId": "primary",
+                    "event": "press",
+                    "action": { "type": "powerOff" }
+                }]
+            }]
+        });
+
+        let runtime = runtime_project(&project);
+        let tags = runtime["tags"].as_array().unwrap();
+        assert_eq!(tags.len(), 3);
+        let direct = tags
+            .iter()
+            .find(|tag| {
+                tag.get("name")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .starts_with("__direct_")
+            })
+            .unwrap();
+        assert_eq!(direct["direction"], "readWrite");
+        assert_eq!(direct["pollMs"], 500);
+        assert_eq!(direct["min"].as_f64(), Some(0.0));
+        assert_eq!(direct["max"].as_f64(), Some(100.0));
+        let direct_name = direct["name"].as_str().unwrap();
+        assert_eq!(
+            runtime["screens"][0]["widgets"][0]["props"]["tag"],
+            direct_name
+        );
+        assert_eq!(
+            runtime["screens"][0]["widgets"][0]["props"]["label"],
+            "DB10.DBD4"
+        );
+        assert_eq!(
+            runtime["screens"][0]["widgets"][1]["props"]["tag"],
+            direct_name
+        );
+        assert!(runtime["screens"][0]["widgets"][0]["props"]
+            .get("binding")
+            .is_none());
+        assert_eq!(
+            runtime["screens"][0]["widgets"][2]["props"]["tag"],
+            "Enabled"
+        );
+        assert_eq!(
+            runtime["screens"][0]["widgets"][2]["props"]["label"],
+            "Enabled"
+        );
+        assert_eq!(
+            runtime["screens"][0]["widgets"][3]["props"]["tag"],
+            "Setpoint"
+        );
+        assert!(runtime["screens"][0]["widgets"][3]["props"]
+            .get("binding")
+            .is_none());
+        assert_eq!(
+            runtime["screens"][0]["inputBindings"][0]["action"]["tag"],
+            "Enabled"
+        );
+        assert_eq!(
+            runtime["screens"][0]["inputBindings"][0]["action"]["operation"],
+            "toggle"
+        );
+        assert_eq!(
+            runtime["screens"][0]["inputBindings"][1]["action"]["tag"],
+            "Setpoint"
+        );
+        assert_eq!(
+            runtime["screens"][0]["inputBindings"][1]["action"]["operation"],
+            "add"
+        );
+        assert_eq!(
+            runtime["screens"][0]["inputBindings"][1]["action"]["operand"],
+            5
+        );
+        assert_eq!(
+            runtime["screens"][0]["inputBindings"][2]["action"]["type"],
+            "powerOff"
+        );
+        let global_setpoint = tags
+            .iter()
+            .find(|tag| tag.get("name").and_then(Value::as_str) == Some("Setpoint"))
+            .unwrap();
+        assert_eq!(global_setpoint["min"].as_f64(), Some(5.0));
+        assert_eq!(global_setpoint["max"].as_f64(), Some(50.0));
     }
 
     #[test]
@@ -485,6 +1160,35 @@ mod tests {
     }
 
     #[test]
+    fn build_preparation_always_regenerates_the_current_project() {
+        let project = json!({
+            "projectId": "current-project",
+            "network": {},
+            "agent": { "protocolVersion": "0.1.0" },
+            "protocols": [],
+            "tags": [],
+            "screens": [],
+            "build": { "baudRate": 115200 }
+        });
+        let directory = std::env::temp_dir().join(format!(
+            "linkpad-studio-build-preparation-{}",
+            std::process::id()
+        ));
+        if directory.exists() {
+            fs::remove_dir_all(&directory).unwrap();
+        }
+        let mut progress = Vec::new();
+        let output = generate_for_build(&directory, &project, &mut |item| progress.push(item))
+            .unwrap();
+        let header = fs::read_to_string(output.join("include/generated_project.h")).unwrap();
+
+        assert!(header.contains("current-project"));
+        assert_eq!(progress.len(), 1);
+        assert_eq!(progress[0].stage, "generating");
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
     fn runtime_template_uses_linkpad_protocol_endpoints() {
         for endpoint in [
             "/lpp/v1/status",
@@ -507,10 +1211,28 @@ mod tests {
         assert!(RUNTIME_CPP.contains("LinkPadStatusOverlay::render"));
         assert!(RUNTIME_CPP.contains("handleInput(input)"));
         assert!(RUNTIME_CPP.contains("executeAction"));
+        assert!(RUNTIME_CPP.contains("changeTagValue(action)"));
+        assert!(RUNTIME_CPP.contains("\"changeValue\""));
+        assert!(RUNTIME_CPP.contains("markProfileTagsQuality(profileId, \"unknown\")"));
+        assert!(RUNTIME_CPP.contains("strlen(profileId) == 0 || sessionFor(profileId).isEmpty()"));
+        assert!(!RUNTIME_CPP.contains(
+            "strlen(profileId) == 0 || !(connectorStates_[profileId][\"tagsGood\"] | false)"
+        ));
+        assert!(RUNTIME_H.contains("markProfileTagsQuality"));
         assert!(RUNTIME_CPP.contains("inputBindings"));
+        assert!(RUNTIME_CPP.contains("handled = executeAction"));
+        assert!(RUNTIME_CPP.contains("M5.Power.powerOff()"));
+        assert!(RUNTIME_CPP.contains("initializeInternalTags"));
+        assert!(RUNTIME_CPP.contains("writeInternalTag"));
+        assert!(RUNTIME_CPP.contains("retainInternalValue"));
+        assert!(RUNTIME_H.contains("Preferences preferences_"));
         assert!(!RUNTIME_CPP.contains("M5.BtnA"));
-        assert!(INPUT_ADAPTER_H.contains("M5.BtnA.wasPressed()"));
+        assert!(INPUT_ADAPTER_H.contains("M5.BtnA.wasClicked()"));
+        assert!(INPUT_ADAPTER_H.contains("M5.BtnA.wasHold()"));
+        assert!(INPUT_ADAPTER_H.contains("M5.BtnPWR.wasClicked()"));
+        assert!(INPUT_ADAPTER_H.contains("M5.BtnPWR.wasHold()"));
         assert!(INPUT_ADAPTER_H.contains("{\"primary\", \"press\"}"));
+        assert!(INPUT_ADAPTER_H.contains("{\"power\", \"longPress\"}"));
         assert!(STATUS_OVERLAY_H.contains("drawWifi"));
         assert!(STATUS_OVERLAY_H.contains("drawAgent"));
         assert!(!RUNTIME_CPP.contains("WiFi:%s Agent:%s"));
@@ -582,6 +1304,7 @@ mod tests {
             ],
             "tags": [
                 {
+                    "id": "global-motor-speed",
                     "name": "MotorSpeed",
                     "type": "float",
                     "direction": "readWrite",
@@ -593,6 +1316,7 @@ mod tests {
                     "quality": "unknown"
                 },
                 {
+                    "id": "global-aux-value",
                     "name": "AuxValue",
                     "type": "int",
                     "direction": "read",
@@ -608,8 +1332,9 @@ mod tests {
                 "width": 240,
                 "height": 135,
                 "widgets": [
-                    { "id": "value", "type": "tag_value", "x": 5, "y": 25, "width": 100, "height": 20, "visible": true, "props": { "tag": "MotorSpeed" } },
-                    { "id": "write", "type": "write_button", "x": 5, "y": 60, "width": 80, "height": 24, "visible": true, "props": { "tag": "MotorSpeed", "text": "Set 42", "value": 42 } }
+                    { "id": "value", "type": "tag_value", "x": 5, "y": 25, "width": 100, "height": 20, "visible": true, "props": { "binding": { "kind": "global-tag", "tagId": "global-motor-speed" } } },
+                    { "id": "aux", "type": "tag_value", "x": 110, "y": 25, "width": 100, "height": 20, "visible": true, "props": { "binding": { "kind": "global-tag", "tagId": "global-aux-value" } } },
+                    { "id": "write", "type": "write_button", "x": 5, "y": 60, "width": 80, "height": 24, "visible": true, "props": { "binding": { "kind": "global-tag", "tagId": "global-motor-speed" }, "text": "Set 42", "value": 42 } }
                 ],
                 "inputBindings": [
                     { "inputId": "primary", "event": "press", "action": { "type": "navigate", "target": "next" } },
@@ -618,15 +1343,15 @@ mod tests {
             }],
             "build": { "serialPort": "", "baudRate": 115200 }
         });
-        generate(&directory, &project).unwrap();
         let mut received_progress = Vec::new();
-        if let Err(error) = build(&directory, false, "", |progress| {
+        if let Err(error) = build(&directory, &project, false, "", |progress| {
             received_progress.push(progress)
         }) {
             let log = fs::read_to_string(directory.join("build/latest.log")).unwrap_or_default();
             panic!("{error}\n{log}");
         }
         assert!(received_progress.len() > 2);
+        assert_eq!(received_progress.first().map(|item| item.stage), Some("generating"));
         assert_eq!(received_progress.last().map(|item| item.percent), Some(100));
         fs::remove_dir_all(directory).unwrap();
     }

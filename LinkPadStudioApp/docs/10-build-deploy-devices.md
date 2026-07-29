@@ -104,7 +104,7 @@ Regras do seletor:
 - se o projeto ainda nao possui porta e exatamente uma foi detectada, ela e selecionada automaticamente;
 - se a porta salva estiver desconectada, ela permanece visivel como `nao detectada` para explicar o estado do projeto;
 - uma porta ausente nunca habilita `Gravar device`;
-- compilar e gerar codigo continuam disponiveis sem porta serial;
+- `Compilar` continua disponivel sem porta serial e sempre gera o codigo antes do build;
 - o upload usa exatamente o valor detectado e selecionado no comando `pio run --target upload --upload-port COMx`.
 
 A descoberta depende do driver USB/serial do hardware estar instalado e do Windows reconhecer a porta. Se o device for conectado depois que a tela ja estiver aberta, o usuario deve clicar em atualizar.
@@ -129,20 +129,21 @@ Essas APIs podem exibir prompts de permissao de site no WebView. Para um app Win
 ## Fluxo
 
 ```text
-Validar projeto
-Gerar codigo
-Preparar assets
 Compilar
-Gravar firmware
-Registrar diagnostico
+  Validar projeto -> preparar ambiente -> gerar codigo -> compilar -> registrar diagnostico
+
+Gravar device
+  Validar projeto -> validar porta -> preparar ambiente -> gerar codigo -> compilar -> gravar -> registrar diagnostico
 ```
+
+`Gerar codigo` nao e uma acao principal independente. Isso evita compilar ou gravar um fonte antigo quando o projeto foi alterado. `Compilar` permanece como acao secundaria para teste; `Gravar device` e a acao completa de deploy serial.
 
 Implementacao `0.2.0`:
 
 - validacao na UI;
-- geracao deterministica;
-- compilacao `pio run`;
-- gravacao `pio run --target upload --upload-port COMx`;
+- geracao deterministica obrigatoria no inicio de cada build;
+- `Compilar` encadeia geracao e `pio run`;
+- `Gravar device` encadeia geracao, compilacao e `pio run --target upload --upload-port COMx`;
 - preparacao automatica da toolchain gerenciada;
 - execucao assincrona de compilacao/gravacao fora da thread da interface;
 - progresso e diagnostico incremental pelo evento `firmware-progress`;
@@ -181,3 +182,15 @@ O Studio deve permitir configurar:
 - Deploy por rede.
 - Perfis por planta.
 - Gerenciamento de frota.
+
+## Estado de Release e Proxima Evolucao
+
+A toolchain gerenciada, o build assincrono, o progresso, o staging curto e a selecao de porta foram validados em desenvolvimento. O template M5 Runtime `0.12.1`, incluindo os sete widgets, estilo portatil, A/B/Power, long press, sequencias, `changeValue`, isolamento de qualidade por ponto e desligamento, foi compilado de verdade. O instalador desktop existente comprova o pipeline Tauri, mas a versao Studio `0.17.1` ainda precisa de uma rodada final de `npm run build`, instalacao/upgrade em maquina limpa e registro dos artefatos antes de ser tratada como release distribuivel.
+
+Antes de OTA ou frota:
+
+- assinar binarios do Studio e firmwares quando a politica de chaves existir;
+- validar instalacao, upgrade e desinstalacao em VM limpa;
+- definir identidade do device e transporte seguro;
+- definir rollback e compatibilidade entre runtime/Agent;
+- preservar log local acionavel e build serial como caminho de recuperacao.

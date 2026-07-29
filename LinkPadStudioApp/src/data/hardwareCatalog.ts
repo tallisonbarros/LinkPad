@@ -1,4 +1,4 @@
-import type { HardwareManifest } from "../types/project";
+import type { HardwareDeviceAction, HardwareInputManifest, HardwareManifest } from "../types/project";
 
 export const hardwareCatalog: HardwareManifest[] = [
   {
@@ -23,7 +23,8 @@ export const hardwareCatalog: HardwareManifest[] = [
         id: "primary",
         label: "Botão A",
         kind: "button",
-        events: ["press"],
+        events: ["press", "longPress"],
+        deviceActions: [],
         configurable: true,
         description: "Controle frontal principal do M5StickC Plus2."
       },
@@ -31,7 +32,8 @@ export const hardwareCatalog: HardwareManifest[] = [
         id: "secondary",
         label: "Botão B",
         kind: "button",
-        events: ["press"],
+        events: ["press", "longPress"],
+        deviceActions: [],
         configurable: true,
         description: "Controle lateral secundário do M5StickC Plus2."
       },
@@ -39,9 +41,10 @@ export const hardwareCatalog: HardwareManifest[] = [
         id: "power",
         label: "Power",
         kind: "button",
-        events: [],
-        configurable: false,
-        description: "Reservado para energia até o runtime oferecer eventos seguros."
+        events: ["press", "longPress"],
+        deviceActions: ["powerOff"],
+        configurable: true,
+        description: "Botão de energia do M5StickC Plus2."
       }
     ],
     network: ["wifi"],
@@ -49,11 +52,22 @@ export const hardwareCatalog: HardwareManifest[] = [
     capabilities: {
       battery: true,
       buzzer: true,
-      imu: true
+      imu: true,
+      powerOff: true
     }
   }
 ];
 
 export function getHardwareManifest(id: string) {
   return hardwareCatalog.find((hardware) => hardware.id === id) ?? hardwareCatalog[0];
+}
+
+export function inputSupportsDeviceAction(
+  hardware: HardwareManifest,
+  input: HardwareInputManifest,
+  action: HardwareDeviceAction
+) {
+  if (!input.deviceActions.includes(action)) return false;
+  if (action === "powerOff") return hardware.capabilities.powerOff;
+  return false;
 }

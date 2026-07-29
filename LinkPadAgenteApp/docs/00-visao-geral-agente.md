@@ -50,11 +50,17 @@ O Device Runtime envia:
 - Permitir driver simulado.
 - Rodar com UI minima, headless ou como servico Windows.
 
-## Estado da Implementacao 0.2.0
+## Estado da Implementacao 0.3.0
 
-Estao entregues API, sessoes, pool, drivers `sim` e `siemens-s7`, politica de destinos IPv4, rate limits globais, deduplicacao de escrita, diagnostico local, servico e bandeja.
+Estao entregues API, sessoes, pool, drivers `sim`, `siemens-s7` e `opcua`, politica de destinos IPv4, rate limits globais, deduplicacao de escrita, diagnostico local, servico e bandeja. OPC UA usa Node ID e modo anonimo/None para validacao em laboratorio; certificados e browse permanecem posteriores.
 
 O S7 serializa operacoes por conexao, reconecta leitura uma vez e confirma escrita sem repeti-la. Deduplicacao de leitura, rate limit por device e outros drivers industriais permanecem no roadmap.
+
+Validacao de bancada atual:
+
+- S7 nativo: handshake do Studio e leitura ponta a ponta pelo M5 em PLC real;
+- OPC UA: leitura/escrita automatizada pelo LinkPad Protocol em servidor real e sessao pelo executavel empacotado;
+- pendente: OPC UA no S7-1200 fisico, escrita real prolongada e testes de carga/reconexao.
 
 ## Plug And Play
 
@@ -67,3 +73,13 @@ A UI local existe apenas para operacao do servico, seguranca, rede e diagnostico
 `App Exemplo Agente LinkPad` mostra uma primeira versao funcional com FastAPI, `pycomm3`, PySide6, cache, rate limit e fila de escrita.
 
 O novo Agente deve reaproveitar esses mecanismos, mas substituir o acoplamento a um PLC global por sessoes e descritores enviados pelo Device Runtime.
+
+## Aberturas de Evolucao
+
+- seguranca OPC UA com certificados e segredos mantidos no Windows;
+- browse/teste de ponto sem persistir tags no Agent;
+- Rockwell Logix via `pycomm3` no mesmo modelo de sessoes;
+- cache de leitura, limites granulares e auditoria;
+- TLS/identidade por device e hardening do instalador.
+
+Nenhuma dessas evolucoes deve reintroduzir cadastro local de PLC/projeto. O plano consolidado fica em `../../docs/06-estado-atual-e-proximos-passos.md`.

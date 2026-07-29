@@ -26,7 +26,7 @@ O status local acrescenta metricas e alertas. O diagnostico de sessao mostra `se
 
 `auth` e token nunca sao retornados.
 
-## Logs 0.2.0
+## Logs 0.3.0
 
 Arquivo:
 
@@ -38,8 +38,10 @@ A infraestrutura de rotacao por tamanho esta implementada. Startup do servidor e
 
 ## Futuro
 
-- exportacao de logs;
-- auditoria de escrita;
-- syslog;
-- OpenTelemetry;
-- dashboard.
+- auditoria de criacao/expiracao de sessao, bloqueios de seguranca e escrita;
+- exportacao de diagnostico com redacao de segredos;
+- metricas por device, target e driver;
+- syslog/OpenTelemetry quando houver requisito operacional;
+- dashboard somente depois que as metricas publicas estiverem estabilizadas.
+
+O primeiro proximo passo e tornar logs suficientes para reproduzir perda de rede, reconexao e escrita incerta na bancada, sem registrar token, `auth`, senha, chave ou valor industrial marcado como sensivel.

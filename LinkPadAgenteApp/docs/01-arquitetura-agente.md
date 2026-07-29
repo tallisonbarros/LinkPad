@@ -18,7 +18,7 @@ LinkPad Agente
   Service Manager
 ```
 
-## Implementacao 0.2.0
+## Implementacao 0.3.0
 
 O codigo esta em `src/linkpad_agent` e separa:
 
@@ -26,11 +26,13 @@ O codigo esta em `src/linkpad_agent` e separa:
 - `protocol`: modelos e erros do contrato;
 - `runtime`: coordenacao, limites, metricas e deduplicacao;
 - `sessions`: sessoes efemeras e connection pool;
-- `drivers`: interface, registry, `sim` e `siemens-s7`;
+- `drivers`: interface, registry, `sim`, `siemens-s7` e `opcua`;
 - `security`: politica de device, driver, IPv4 e redes/CIDRs;
 - `host`, `service_main` e `tray_main`: execucao Windows.
 
 Cache de leitura e health check generico permanecem futuros. O S7 ja possui lock por conexao, reconexao unica de leitura e confirmacao de escrita.
+
+O OPC UA tambem possui lock por conexao, cache efemero de NodeIds/VariantTypes, resolucao `nsu=`, reconexao unica de leitura e confirmacao de escrita. Esses caches nunca constituem configuracao de projeto.
 
 ## Fluxo de Requisicao
 
@@ -73,7 +75,7 @@ Request Manager:
 Connection Pool:
 
 - Calcula uma chave segura para descritores equivalentes.
-- Reutiliza conexoes S7 e futuras conexoes OPC UA/Logix.
+- Reutiliza conexoes S7 e OPC UA; Logix permanece futuro.
 - Delega ao driver sua estrategia segura de reconexao.
 - Fecha conexoes ociosas.
 
@@ -114,3 +116,12 @@ O Agente deve poder rodar:
 - Como servico Windows.
 
 A UI nao deve reintroduzir cadastro manual de PLC, tags ou perfis como fluxo normal.
+
+## Fronteiras Para Evolucao
+
+- certificados, trust store e credenciais OPC UA ficam em armazenamento local protegido do Agent e exigem schema/migracao proprios;
+- browse e teste de ponto reutilizam sessao/driver, mas nao criam lista persistente de tags;
+- Rockwell, Modbus e futuros drivers implementam a mesma interface e so aparecem em capabilities quando funcionais;
+- subscriptions exigem contrato LinkPad Protocol novo; nao podem vazar objetos `asyncua` para o Device Runtime;
+- cache, fila e limites granulares permanecem no core e nao alteram descritores do Studio;
+- cluster/cloud/frota nao entram antes de identidade, TLS, auditoria e operacao local estarem estabilizados.

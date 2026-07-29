@@ -83,6 +83,16 @@ slot = 1
 porta = 102
 ```
 
+## Validacao Real
+
+O handshake do Studio e a leitura ponta a ponta `M5 -> Agent -> S7-1200` foram validados em bancada com DB absoluto. Permanecem como fechamento de engenharia:
+
+- validar escrita confirmada no PLC real com intertravamentos seguros;
+- testar perda/retorno de rede e reinicio do PLC/Agent;
+- medir estabilidade de polling prolongado e concorrencia com varios devices;
+- registrar modelo/firmware da CPU e configuracao TIA usada;
+- repetir o teste com os quatro tipos suportados.
+
 ## Falhas e Escritas
 
 - A leitura que perde transporte recria o cliente e tenta novamente uma unica vez.
@@ -99,3 +109,5 @@ porta = 102
 - transporte S7 protegido;
 - PLC real redundante ou conexao roteada;
 - importacao de tags do TIA Portal.
+
+Importacao/browse futuro deve preencher o mesmo endereco absoluto usado hoje e nao tornar o Agent dependente de um projeto TIA persistido.

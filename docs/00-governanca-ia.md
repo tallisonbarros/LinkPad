@@ -49,6 +49,8 @@ Todo Markdown em `docs`, `LinkPadStudioApp/docs` e `LinkPadAgenteApp/docs` tem v
 
 Uma mudanca de implementacao que contradiz um Markdown deve atualizar o Markdown na mesma entrega.
 
+O snapshot consolidado de versoes, capacidades entregues e evolucoes abertas fica em `docs/06-estado-atual-e-proximos-passos.md`. Ele nao substitui os contratos especializados, mas deve permanecer coerente com eles.
+
 ## Tipos de Mudanca
 
 Use estes tipos ao descrever alteracoes:

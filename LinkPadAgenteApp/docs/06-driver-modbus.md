@@ -69,3 +69,7 @@ Endereco de ponto:
 ## MVP
 
 O primeiro suporte Modbus deve ser um driver do Agente. O M5 envia descritores LinkPad Protocol e nao implementa Modbus.
+
+Estado atual: `modbus-tcp` e `modbus-rtu` nao estao implementados nem anunciados pelo Agent; aparecem desabilitados no Studio. A prioridade fica depois da bancada Siemens e do driver Rockwell.
+
+Primeira fatia recomendada: Modbus TCP, IPv4 privado/porta 502, unit ID, coils e holding/input registers, com configuracao explicita de base de endereco e ordem de bytes/words. RTU exige antes um contrato operacional para posse da porta serial no Windows.

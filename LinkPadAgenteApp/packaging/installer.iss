@@ -1,5 +1,5 @@
 #define MyAppName "LinkPad Agent"
-#define MyAppVersion "0.2.0"
+#define MyAppVersion "0.3.0"
 #define MyAppPublisher "LinkPad"
 
 [Setup]
@@ -24,8 +24,8 @@ Name: "{commonappdata}\LinkPad\Agent"
 Name: "{commonappdata}\LinkPad\Agent\logs"
 
 [Files]
-Source: "..\dist\0.2.0\LinkPadAgentService\*"; DestDir: "{app}\Service"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "..\dist\0.2.0\LinkPadAgentTray\*"; DestDir: "{app}\Tray"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\0.3.0\LinkPadAgentService\*"; DestDir: "{app}\Service"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\0.3.0\LinkPadAgentTray\*"; DestDir: "{app}\Tray"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Registry]
 Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "LinkPadAgentTray"; ValueData: """{app}\Tray\LinkPadAgentTray.exe"""; Flags: uninsdeletevalue

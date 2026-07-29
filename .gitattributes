@@ -4,6 +4,7 @@
 *.cmd text eol=crlf
 *.bat text eol=crlf
 *.sh text eol=lf
+LinkPadStudioApp/src-tauri/gen/schemas/*.json text eol=lf
 
 *.ico binary
 *.png binary

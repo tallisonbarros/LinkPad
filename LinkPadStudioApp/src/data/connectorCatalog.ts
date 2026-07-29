@@ -33,14 +33,19 @@ export const connectorCatalog: ConnectorManifest[] = [
     defaultOptions: { rack: 0, slot: 1, timeoutMs: 2000 }
   },
   {
-    id: "siemens-opcua",
-    name: "Siemens OPC UA",
-    description: "S7-1200/1500 por OPC UA, quando o driver estiver disponível no Agent.",
+    id: "opcua",
+    name: "OPC UA",
+    description: "Servidores OPC UA, inicialmente validados com Siemens S7-1200/1500.",
     endpointExample: "opc.tcp://192.168.0.10:4840",
     addressField: "nodeId",
     addressExample: "ns=3;s=Motor.Speed",
-    available: false,
-    defaultOptions: {}
+    available: true,
+    defaultOptions: {
+      securityPolicy: "None",
+      securityMode: "None",
+      sessionTimeoutMs: 30000,
+      requestTimeoutMs: 2000
+    }
   },
   {
     id: "rockwell-logix",
@@ -105,5 +110,6 @@ export function defaultAddressFor(
       dataType
     };
   }
+  if (driver === "opcua") return { nodeId: `ns=3;s=${tag.name}` };
   return { [getConnectorManifest(driver).addressField]: tag.name };
 }

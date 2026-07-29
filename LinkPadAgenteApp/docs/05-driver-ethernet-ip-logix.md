@@ -10,6 +10,8 @@ O exemplo atual validou `pycomm3` e `LogixDriver` com sucesso.
 
 Essa base deve ser preservada e adaptada para receber `target` do Device Runtime em vez de configuracao global.
 
+Estado atual: o driver ainda nao existe no novo Agent `0.3.0` e permanece desabilitado no Studio `0.9.0`. A validacao do prototipo comprova a biblioteca/caminho industrial, mas nao comprova sessoes, politica de destino, erros normalizados ou empacotamento do produto novo.
+
 ## Descritor de Destino
 
 Campos esperados:
@@ -72,3 +74,15 @@ Expor:
 - RPS leitura/escrita.
 - tag cache refresh.
 - sessoes e conexoes compartilhadas que usam o target.
+
+## Plano de Implementacao
+
+1. portar somente a camada `pycomm3` para a interface `IndustrialDriver`;
+2. validar IPv4 privado, path/slot, timeout e schema de tag;
+3. implementar leitura/escrita e tipos basicos sem configuracao global;
+4. confirmar escrita sem retry ambiguo;
+5. cobrir connection pool, falhas e capabilities;
+6. incluir no PyInstaller e testar com PLC Rockwell real;
+7. somente entao marcar `rockwell-logix` como disponivel no Studio.
+
+Browse/listagem de tags pode vir depois da operacao direta por nome e devera usar o futuro contrato paginado comum tambem ao OPC UA.

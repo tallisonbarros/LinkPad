@@ -6,8 +6,9 @@ param(
 $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $VenvPython = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
-$AppVersion = "0.2.0"
+$AppVersion = "0.3.0"
 $VersionedDist = Join-Path $ProjectRoot "dist\$AppVersion"
+$WorkRoot = Join-Path $env:LOCALAPPDATA "LinkPad\AgentBuild\$AppVersion"
 if (-not $Python) {
     $Python = if (Test-Path $VenvPython) { $VenvPython } else { "python" }
 }
@@ -22,8 +23,8 @@ function Invoke-Python {
 
 Push-Location $PSScriptRoot
 try {
-    Invoke-Python @("-m", "PyInstaller", "--noconfirm", "--clean", "service.spec", "--distpath", $VersionedDist, "--workpath", "$ProjectRoot\build\service")
-    Invoke-Python @("-m", "PyInstaller", "--noconfirm", "--clean", "tray.spec", "--distpath", $VersionedDist, "--workpath", "$ProjectRoot\build\tray")
+    Invoke-Python @("-m", "PyInstaller", "--noconfirm", "--clean", "service.spec", "--distpath", $VersionedDist, "--workpath", "$WorkRoot\service")
+    Invoke-Python @("-m", "PyInstaller", "--noconfirm", "--clean", "tray.spec", "--distpath", $VersionedDist, "--workpath", "$WorkRoot\tray")
 
     if (-not $SkipInstaller) {
         $iscc = Get-Command ISCC.exe -ErrorAction SilentlyContinue

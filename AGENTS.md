@@ -5,7 +5,7 @@ Este arquivo e a entrada obrigatoria para qualquer agente de IA ou programador q
 O projeto esta dividido em dois produtos principais:
 
 - `LinkPadStudioApp`: ambiente de engenharia usado para criar projetos, telas, tags, catalogos de hardware, simulacao e geracao de runtimes.
-- `LinkPadAgenteApp`: agente/gateway industrial orientado a requisicoes. Ele expoe o LinkPad Protocol via HTTP/JSON e executa descritores industriais enviados pelo Device Runtime, usando drivers como Siemens OPC UA, Rockwell Logix/EtherNet-IP, Modbus e futuramente PROFINET IO.
+- `LinkPadAgenteApp`: agente/gateway industrial orientado a requisicoes. Ele expoe o LinkPad Protocol via HTTP/JSON e executa descritores enviados pelo Device Runtime. Estao implementados `sim`, Siemens S7 nativo e OPC UA generico; Rockwell, Modbus e PROFINET permanecem evolucoes.
 
 Quando presentes no ambiente local, as pastas `App Exemplo M5Stick` e `App Exemplo Agente LinkPad` sao referencias funcionais. Elas sao ignoradas pelo Git, nao fazem parte do clone colaborativo e nao devem ser alteradas sem pedido explicito do usuario. Nenhuma tarefa pode depender da existencia dessas pastas.
 
@@ -23,41 +23,39 @@ Antes de implementar qualquer mudanca, leia:
 2. `docs/01-contratos-de-mudanca.md`
 3. `docs/02-versionamento.md`
 4. `docs/05-fluxo-colaboracao.md`
-5. O documento da area alterada em `LinkPadStudioApp/docs` ou `LinkPadAgenteApp/docs`
+5. `docs/06-estado-atual-e-proximos-passos.md`
+6. O documento da area alterada em `LinkPadStudioApp/docs` ou `LinkPadAgenteApp/docs`
 
 Para mudancas entre device e agente, leia tambem:
 
 1. `LinkPadStudioApp/docs/07-integracao-com-agent-http.md`
 2. `LinkPadAgenteApp/docs/02-api-http-device-agent.md`
 
-## Fluxo Obrigatorio de Trabalho Simultaneo
+## Fluxo de Trabalho
 
-O repositorio deve transformar uma intencao curta, como "integre o hardware X", em uma entrega isolada, validada e revisavel.
+O repositorio aceita trabalho sequencial ou simultaneo. Nao imponha branch/PR novo quando uma unica pessoa estiver conduzindo iteracoes locais na linha atual; use isolamento remoto quando houver paralelismo real, revisao ou publicacao.
 
-Antes de editar:
+Sempre:
 
-1. Inspecione `git status`, a branch atual e os remotos sem descartar mudancas existentes.
-2. Atualize a visao do remoto com `git fetch origin --prune` e verifique branches ou Pull Requests que possam tocar a mesma area.
-3. Nunca implemente diretamente na `main`. Crie uma branch curta e descritiva com `scripts/start-work.ps1`, ou use o isolamento equivalente fornecido pelo ambiente.
-4. Publique a branch no inicio do trabalho quando houver autorizacao e acesso ao remoto. Se a ferramenta permitir, abra um Pull Request em modo draft para tornar o escopo visivel.
-5. Leia os contratos da area e delimite a menor fatia vertical que entrega o objetivo. Trabalho futuro relacionado deve ser registrado como continuacao, nao incorporado silenciosamente ao escopo.
+1. Inspecione `git status` e a branch atual sem descartar mudancas existentes.
+2. Leia os contratos e delimite a menor fatia vertical que entrega o objetivo.
+3. Preserve alteracoes existentes e nao use descarte em massa, force push ou reescrita de historico.
+4. Atualize documentacao e consumidores de qualquer contrato alterado.
+5. Execute validacao proporcional e revise diff, segredos e artefatos antes da entrega.
 
-Durante a implementacao:
+No modo sequencial:
 
-- Preserve alteracoes simultaneas. Nunca resolva conflito descartando automaticamente o lado de outro colaborador.
-- Mudanca em contrato compartilhado exige documentacao no mesmo Pull Request e verificacao dos consumidores.
-- Nao use `git reset --hard`, `git checkout -- <arquivo>`, force push ou reescrita de historico para contornar divergencias.
-- Se o ambiente gerencia worktree ou branch automaticamente, respeite esse isolamento e nao troque de branch por conta propria.
+- continue na branch/worktree atual fornecida pelo usuario ou ambiente;
+- nao faca fetch, commit, push, troca de branch ou Pull Request sem necessidade/autorizacao;
+- publique o conjunto apenas quando estiver coerente.
 
-Antes de entregar:
+No modo simultaneo ou em uma entrega para revisao remota:
 
-1. Execute `git fetch origin --prune` e integre `origin/main` na branch sem reescrever historico publicado.
-2. Execute `scripts/validate-work.ps1`; use `-All` quando a mudanca for transversal.
-3. Revise o diff, os arquivos gerados, os segredos e os Markdown afetados.
-4. Faca commit e push na branch. Prepare o Pull Request usando o template do repositorio.
-5. Nunca faca merge automatico na `main`; a aprovacao final e humana.
+- atualize a visao de `origin`, verifique branches/PRs sobrepostos e use uma branch curta por objetivo;
+- publique cedo quando autorizado e integre a base antes da entrega;
+- prepare Pull Request e CI; merge na `main` continua sendo decisao humana.
 
-O fluxo completo e canonico em `docs/05-fluxo-colaboracao.md`.
+Se o ambiente gerencia worktree ou branch automaticamente, respeite esse isolamento. O fluxo completo e canonico em `docs/05-fluxo-colaboracao.md`.
 
 ## Contratos Canonicos
 
@@ -70,7 +68,7 @@ Os contratos canonicos do projeto sao:
 - Catalogo de hardwares: `LinkPadStudioApp/docs/03-catalogo-de-hardwares.md`
 - Runtime embarcado: `LinkPadStudioApp/docs/04-runtime-device.md`
 - Configuracao do Agente: `LinkPadAgenteApp/docs/03-modelo-de-configuracao.md`
-- Colaboracao simultanea: `docs/05-fluxo-colaboracao.md`
+- Colaboracao sequencial ou simultanea: `docs/05-fluxo-colaboracao.md`
 
 Quando dois documentos descrevem o mesmo contrato, eles devem permanecer consistentes.
 
@@ -94,8 +92,8 @@ Quando dois documentos descrevem o mesmo contrato, eles devem permanecer consist
 - A mudanca respeita a separacao Studio, Runtime e Agente?
 - Os Markdown afetados foram atualizados?
 - Os exemplos existentes foram preservados?
-- A tarefa foi isolada da `main` e sincronizada com o trabalho simultaneo?
-- O Pull Request descreve sobreposicoes, validacoes e continuacoes?
+- Quando houve paralelismo/publicacao, a tarefa foi isolada e sincronizada com a base?
+- Quando houve Pull Request, ele descreve sobreposicoes, validacoes e continuacoes?
 - O contrato HTTP segue compatibilidade `value` e `valor` quando aplicavel?
 - O modo simulado continua possivel?
 - Estados de erro, offline, timeout e permissao foram considerados?

@@ -1,10 +1,14 @@
-# Fluxo de Colaboracao Simultanea
+# Fluxo de Colaboracao
 
 ## Objetivo
 
-Permitir desenvolvimento continuo por humanos e agentes de IA sem depender de instrucoes mecanicas repetidas e sem permitir que uma entrega sobrescreva silenciosamente outra.
+Permitir desenvolvimento continuo, sequencial ou simultaneo, por humanos e agentes de IA sem depender de instrucoes mecanicas repetidas e sem permitir que uma entrega sobrescreva silenciosamente outra.
 
 O usuario informa a intencao. O agente usa os contratos versionados para descobrir escopo, dependencias, documentacao e validacoes.
+
+No modo sequencial, uma pessoa conduz a linha de trabalho atual e publica o conjunto quando estiver coerente. No modo simultaneo, cada objetivo usa branch/PR proprio. A infraestrutura de colaboracao existe para reduzir risco quando houver paralelismo real; ela nao obriga o proprietario a abrir um Pull Request para cada iteracao local.
+
+No revezamento sequencial entre maquinas, a passagem de turno ocorre somente com worktree limpo e `main` publicada. O proximo responsavel clona ou atualiza a `main`, executa `setup-dev.cmd` no primeiro clone e trabalha apenas depois que a validacao local concluir.
 
 ## Fontes Canonicas
 
@@ -23,7 +27,7 @@ Exemplo:
 
 > Integre suporte ao hardware M5Stack CoreS3.
 
-O agente deve:
+Quando a entrega for simultanea ou destinada a Pull Request, o agente deve:
 
 1. inspecionar o estado Git e trabalho remoto potencialmente sobreposto;
 2. criar e publicar uma branch descritiva;
@@ -35,6 +39,8 @@ O agente deve:
 8. validar localmente;
 9. entregar Pull Request com riscos e continuacoes.
 
+No modo local sequencial, a descoberta de contratos, implementacao, documentacao, validacao e revisao continuam iguais; criar/publicar branch, integrar `origin/main` e abrir Pull Request podem aguardar o momento de publicacao definido pelo proprietario.
+
 Para um novo hardware, a leitura minima inclui:
 
 - `LinkPadStudioApp/docs/03-catalogo-de-hardwares.md`;
@@ -44,9 +50,9 @@ Para um novo hardware, a leitura minima inclui:
 
 `LinkPadStudioApp/docs/05-editor-visual-e-widgets.md` entra no escopo quando o novo hardware exige adaptacao do editor, layout ou widgets. Widgets adicionais desejaveis, mas nao necessarios para habilitar o hardware, devem virar uma continuacao separada.
 
-## Isolamento
+## Isolamento Quando Houver Paralelismo
 
-A `main` representa somente estado integrado. Cada objetivo usa uma branch curta.
+A `main` representa somente estado integrado. Quando duas entregas ocorrerem em paralelo ou quando uma entrega for preparada para revisao remota, cada objetivo usa uma branch curta.
 
 O script recomendado e:
 
@@ -119,13 +125,13 @@ Mudancas transversais usam:
 
 A CI remota executa sempre os tres grupos para impedir que uma integracao local aparentemente isolada quebre outro componente.
 
-## Pull Request Como Unidade de Integracao
+## Pull Request Como Unidade de Integracao Remota
 
 O Pull Request descreve:
 
 - resultado entregue;
 - componentes e contratos afetados;
-- trabalho simultaneo verificado;
+- sobreposicoes remotas verificadas quando houver paralelismo;
 - documentacao atualizada;
 - testes executados;
 - riscos e continuacoes.
@@ -156,11 +162,11 @@ O agente automatiza descoberta, Git, implementacao, documentacao, testes e prepa
 
 ## Criterio de Pronto
 
-Uma entrega colaborativa esta pronta quando:
+Uma entrega esta pronta quando:
 
-- a branch esta sincronizada com a base atual;
+- a branch esta sincronizada com a base atual, quando houver entrega remota;
 - nao ha trabalho simultaneo descartado;
 - contratos e Markdown estao coerentes;
-- validacoes locais e CI passaram;
+- validacoes locais passaram e a CI passou quando houver Pull Request;
 - riscos e continuacoes estao explicitos;
-- um humano aprovou o merge.
+- um humano aprovou o merge, quando houver merge na `main`.

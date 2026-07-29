@@ -24,11 +24,12 @@ async def test_status_and_capabilities_announce_installed_drivers(agent_config, 
         capabilities = await client.get("/lpp/v1/capabilities", headers=headers)
 
     assert status.status_code == 200
-    assert status.json()["drivers"] == ["sim", "siemens-s7"]
+    assert status.json()["drivers"] == ["sim", "siemens-s7", "opcua"]
     assert capabilities.status_code == 200
     assert [item["id"] for item in capabilities.json()["drivers"]] == [
         "sim",
         "siemens-s7",
+        "opcua",
     ]
     await runtime.stop()
 

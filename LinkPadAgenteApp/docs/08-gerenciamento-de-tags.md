@@ -24,9 +24,15 @@ Exemplo:
 
 O Studio define o nome logico, o perfil e o endereco. O runtime envia esses dados. O Agente nao precisa conhecer o nome usado pelo widget ou pelo PLC fora da requisicao.
 
+Desde o Studio/runtime `0.7.0`, o projeto pode vincular um consumidor diretamente a um conector/endereco ou a uma Tag global. Essa diferença existe somente na engenharia: o gerador resolve ambos para pontos autodescritivos antes de gerar o firmware. IDs internos de Tags globais e o `DataBinding` não são configuração do Agente.
+
 No runtime `0.4.0`, tags sao agrupadas por `protocolProfileId` antes da chamada HTTP. Cada lote chega ao Agent com o `sessionId` do perfil correspondente; o Agent continua recebendo apenas pontos autodescritivos e nao persiste esse vinculo.
 
 Campos de engenharia como `unit`, `format`, `pollMs`, `simulationValue` e a configuracao visual do widget pertencem ao Studio/runtime. O runtime envia ao Agent apenas `id`, `address`, `type` e, em escrita, `value`, `min` e `max` conforme o LinkPad Protocol.
+
+Desde o Studio `0.7.2`, `min` e `max` são configurados no widget ou na ação de escrita e agregados ao ponto durante a geração. Essa origem é invisível ao Agent: a requisição HTTP continua contendo a mesma faixa efetiva e o Agent continua aplicando a validação prevista no protocolo.
+
+Desde o Studio/Device Runtime `0.8.0`, uma Tag global também pode ser `internal`. Essa origem é executada exclusivamente no cache do device e pode usar retenção local; ela não possui sessão, endereço industrial nem requisição LinkPad Protocol. `initialValue` e `retentive` nunca são enviados ao Agent. A comunicação `sim` permanece externa e continua chegando ao driver `sim` normalmente.
 
 ## Descoberta
 
@@ -45,8 +51,9 @@ O Agente deve informar qualidade:
 - `stale`
 - `offline`
 - `unknown`
+- `uncertain`
 
-O driver `sim` entregue em `0.1.0` retorna `good`. Os demais estados serao normalizados quando entrarem drivers de rede.
+O driver `sim` entregue em `0.1.0` retorna `good`. S7 usa `offline` em perda de comunicacao e `uncertain` quando uma escrita nao pode ser confirmada. OPC UA preserva Good/Uncertain do `DataValue`, transforma StatusCode Bad em erro por ponto e usa `offline` em falha de transporte.
 
 O driver `siemens-s7` usa `good` no sucesso, `offline` quando uma leitura nao consegue reconectar e `uncertain` quando nao e possivel confirmar se uma escrita chegou ao PLC.
 
@@ -68,6 +75,8 @@ Antes de escrever:
 
 Em `0.2.0`, faixa numerica e deduplicacao continuam no core. O S7 valida tipo LinkPad contra `BOOL`, `INT`, `DINT` ou `REAL`, serializa as operacoes por conexao e confirma a escrita por leitura. Permissao por ponto continua futura.
 
+Em `0.3.0`, OPC UA valida o tipo LinkPad contra o `VariantType` real do Node ID, preserva StatusCode/timestamp do DataValue e confirma escrita por releitura. Node ID inexistente e permissao negada sao erros isolados por ponto.
+
 Exemplo S7:
 
 ```json
@@ -77,3 +86,10 @@ Exemplo S7:
   "address": {"area": "DB", "dbNumber": 100, "byteOffset": 0, "dataType": "REAL"}
 }
 ```
+
+## Evolucoes
+
+- cache de leitura deve preservar timestamp/qualidade e nunca esconder falha indefinidamente;
+- teste de ponto e browse nao criam cadastro persistente de tags no Agent;
+- permissao de escrita por manifesto/politica pode complementar `direction`, sem confiar apenas no payload do device;
+- subscriptions futuras devem produzir o mesmo modelo de valor/qualidade usado por read, sem expor objetos nativos do driver.

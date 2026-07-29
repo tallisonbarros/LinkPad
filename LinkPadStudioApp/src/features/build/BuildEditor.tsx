@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, Code2, Cpu, Download, LoaderCircle, RefreshCw, Upload, Wrench, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Cpu, Download, LoaderCircle, RefreshCw, Upload, Wrench, XCircle } from "lucide-react";
 import { validateProjectForBuild } from "../../domain/project/validation";
 import {
-  generateFirmware,
   getToolchainStatus,
   listSerialPorts,
   prepareToolchain,
@@ -19,10 +18,11 @@ interface BuildEditorProps {
   onSetProject: (project: LinkPadProject) => void;
 }
 
-type Operation = "toolchain" | "generate" | "build" | "flash";
+type Operation = "toolchain" | "build" | "flash";
 type OperationState = { kind: "idle" } | { kind: "loading"; operation: Operation } | { kind: "success"; message: string } | { kind: "error"; message: string };
 
 const progressStageLabels: Record<string, string> = {
+  generating: "Gerando código",
   preparing: "Preparando",
   starting: "Iniciando",
   running: "Executando",
@@ -114,27 +114,24 @@ export function BuildEditor({ project, onSetProject }: BuildEditorProps) {
       setState({ kind: "error", message: "Corrija os erros de validação antes de continuar." });
       return;
     }
-    if (operation !== "generate" && !(await ensureToolchain())) return;
-    if (operation !== "generate") {
-      setFirmwareProgress({ stage: "preparing", message: "Gerando o firmware do projeto...", percent: 0 });
-      setFirmwareLog([]);
-    }
+    if (!(await ensureToolchain())) return;
+    setFirmwareProgress({ stage: "generating", message: "Gerando o código do projeto...", percent: 0 });
+    setFirmwareLog([]);
     setState({ kind: "loading", operation });
     try {
-      if (operation === "generate") {
-        const result = await generateFirmware(project);
-        setState({ kind: "success", message: `Firmware gerado em ${result.outputPath}` });
-      } else {
-        await generateFirmware(project);
-        const result = await runFirmwareBuild(project, operation === "flash", (progress) => {
-          setFirmwareProgress(progress);
-          setFirmwareLog((current) => {
-            if (!progress.message.trim() || current[current.length - 1] === progress.message) return current;
-            return [...current, progress.message].slice(-8);
-          });
+      const result = await runFirmwareBuild(project, operation === "flash", (progress) => {
+        setFirmwareProgress(progress);
+        setFirmwareLog((current) => {
+          if (!progress.message.trim() || current[current.length - 1] === progress.message) return current;
+          return [...current, progress.message].slice(-8);
         });
-        setState({ kind: "success", message: `${operation === "flash" ? "Firmware gravado" : "Build concluído"}. Log: ${result.logPath}` });
-      }
+      });
+      setState({
+        kind: "success",
+        message: operation === "flash"
+          ? `Código gerado, compilado e firmware gravado. Log: ${result.logPath}`
+          : `Código gerado e compilação concluída. Log: ${result.logPath}`
+      });
     } catch (error) {
       setState({ kind: "error", message: String(error) });
     }
@@ -219,7 +216,6 @@ export function BuildEditor({ project, onSetProject }: BuildEditorProps) {
               <label>Baud rate<select value={project.build.baudRate} onChange={(event) => updateBuild({ baudRate: Number(event.target.value) })}><option value={115200}>115200</option><option value={921600}>921600</option><option value={1500000}>1500000</option></select></label>
             </div>
             <div className="build-buttons">
-              <button type="button" disabled={loading || errors.length > 0} onClick={() => execute("generate")}><Code2 size={17} /> Gerar código</button>
               <button type="button" disabled={loading || errors.length > 0} onClick={() => execute("build")}><Cpu size={17} /> Compilar</button>
               <button className="primary" type="button" disabled={loading || serialPortsLoading || errors.length > 0 || !serialPortAvailable} onClick={() => execute("flash")}><Upload size={17} /> Gravar device</button>
             </div>
@@ -240,7 +236,7 @@ export function BuildEditor({ project, onSetProject }: BuildEditorProps) {
 
           <aside className="validation-panel">
             <h3>Validação do projeto</h3>
-            {errors.length === 0 && warnings.length === 0 && <div className="validation-ok"><CheckCircle2 size={18} /> Projeto pronto para gerar.</div>}
+            {errors.length === 0 && warnings.length === 0 && <div className="validation-ok"><CheckCircle2 size={18} /> Projeto pronto para compilar ou gravar.</div>}
             {errors.map((issue) => <div className="validation-item error" key={`${issue.path}-${issue.message}`}><XCircle size={17} /><span><strong>{issue.path}</strong>{issue.message}</span></div>)}
             {warnings.map((issue) => <div className="validation-item warning" key={`${issue.path}-${issue.message}`}><AlertTriangle size={17} /><span><strong>{issue.path}</strong>{issue.message}</span></div>)}
           </aside>

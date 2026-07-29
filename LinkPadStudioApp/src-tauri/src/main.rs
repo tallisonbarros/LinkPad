@@ -263,16 +263,6 @@ fn send_agent_json(
 }
 
 #[tauri::command]
-fn generate_firmware(project: Value) -> Result<Value, String> {
-    let project_dir = resolve_project_dir(&project)?;
-    let output = firmware::generate(&project_dir, &project)?;
-    Ok(json!({
-        "ok": true,
-        "outputPath": output.to_string_lossy()
-    }))
-}
-
-#[tauri::command]
 async fn run_firmware_build(
     app: tauri::AppHandle,
     project: Value,
@@ -285,7 +275,7 @@ async fn run_firmware_build(
         .unwrap_or_default()
         .to_string();
     tauri::async_runtime::spawn_blocking(move || {
-        firmware::build(&project_dir, flash, &serial_port, |progress| {
+        firmware::build(&project_dir, &project, flash, &serial_port, |progress| {
             let _ = app.emit("firmware-progress", progress);
         })
     })
@@ -324,7 +314,6 @@ fn main() {
             save_project_to_disk,
             test_agent_connection,
             test_connector_connection,
-            generate_firmware,
             run_firmware_build,
             list_serial_ports,
             get_toolchain_status,
@@ -415,7 +404,7 @@ fn backup_legacy_project(project_dir: &Path) -> Result<(), String> {
     let Ok(project) = read_json(&project_path) else {
         return Ok(());
     };
-    let Some(schema_version @ ("0.1.0" | "0.2.0")) =
+    let Some(schema_version @ ("0.1.0" | "0.2.0" | "0.3.0" | "0.4.0" | "0.5.0" | "0.6.0" | "0.7.0" | "0.8.0")) =
         project.get("schemaVersion").and_then(Value::as_str)
     else {
         return Ok(());
@@ -527,7 +516,7 @@ mod tests {
     }
 
     #[test]
-    fn backs_up_schema_0_2_before_saving_the_migrated_project() {
+    fn backs_up_schema_0_4_before_saving_the_migrated_project() {
         let directory = std::env::temp_dir().join(format!(
             "linkpad-studio-project-backup-{}",
             std::process::id()
@@ -538,14 +527,39 @@ mod tests {
         fs::create_dir_all(&directory).unwrap();
         fs::write(
             directory.join("project.json"),
-            r#"{"schemaVersion":"0.2.0","name":"Legacy"}"#,
+            r#"{"schemaVersion":"0.4.0","name":"Legacy"}"#,
         )
         .unwrap();
         fs::write(directory.join("screens.json"), r#"{"screens":[]}"#).unwrap();
 
         backup_legacy_project(&directory).unwrap();
 
-        let backup = directory.join(".migration-backup/0.2.0");
+        let backup = directory.join(".migration-backup/0.4.0");
+        assert!(backup.join("project.json").exists());
+        assert!(backup.join("screens.json").exists());
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn backs_up_schema_0_8_before_saving_the_migrated_project() {
+        let directory = std::env::temp_dir().join(format!(
+            "linkpad-studio-project-backup-v8-{}",
+            std::process::id()
+        ));
+        if directory.exists() {
+            fs::remove_dir_all(&directory).unwrap();
+        }
+        fs::create_dir_all(&directory).unwrap();
+        fs::write(
+            directory.join("project.json"),
+            r#"{"schemaVersion":"0.8.0","name":"Legacy controls"}"#,
+        )
+        .unwrap();
+        fs::write(directory.join("screens.json"), r#"{"screens":[]}"#).unwrap();
+
+        backup_legacy_project(&directory).unwrap();
+
+        let backup = directory.join(".migration-backup/0.8.0");
         assert!(backup.join("project.json").exists());
         assert!(backup.join("screens.json").exists());
         fs::remove_dir_all(directory).unwrap();

@@ -10,7 +10,7 @@ if (-not (Test-Path -LiteralPath $Python)) {
     throw "Ambiente .venv não encontrado. Execute as instruções de instalação do README primeiro."
 }
 
-& $Python -c "from importlib.metadata import version; assert version('python-snap7') == '3.0.0'" 2>$null
+& $Python -c "from importlib.metadata import version; assert version('python-snap7') == '3.0.0'; assert version('asyncua') == '2.0.1'" 2>$null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Atualizando as dependências de desenvolvimento do LinkPad Agent..."
     & $Python -m pip install -e "${ProjectRoot}[dev,windows]"

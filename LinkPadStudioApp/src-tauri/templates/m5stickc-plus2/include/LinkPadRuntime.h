@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <Preferences.h>
 #include "LinkPadInputAdapter.h"
 
 enum class LinkPadState {
@@ -30,10 +31,17 @@ class LinkPadRuntime {
   bool handleInput(const LinkPadInputEvent& input);
   bool executeAction(JsonObjectConst action);
   bool writeWidget(JsonObjectConst widget);
+  bool changeTagValue(JsonObjectConst action);
   bool writeTagValue(const char* tagName, JsonVariantConst value);
+  bool writeInternalTag(JsonObjectConst tag, JsonVariantConst value);
+  bool internalValueAllowed(JsonObjectConst tag, JsonVariantConst value) const;
+  void initializeInternalTags();
+  void retainInternalValue(JsonObjectConst tag, JsonVariantConst value);
+  void flushRetainedValues(bool force = false);
   int request(const String& method, const String& path, const String& body, String& response);
   JsonObject connectorStateFor(const char* profileId);
   String sessionFor(const char* profileId) const;
+  void markProfileTagsQuality(const char* profileId, const char* quality);
   void invalidateSession(const char* profileId);
   void refreshState();
   size_t enabledConnectorCount() const;
@@ -48,11 +56,16 @@ class LinkPadRuntime {
   DynamicJsonDocument config_{24576};
   DynamicJsonDocument values_{8192};
   DynamicJsonDocument connectorStates_{8192};
+  DynamicJsonDocument retainedValues_{8192};
+  Preferences preferences_;
   LinkPadInputAdapter inputAdapter_;
   LinkPadState state_ = LinkPadState::Booting;
   bool agentOnline_ = false;
   uint32_t lastPollAt_ = 0;
   uint32_t retryAt_ = 0;
+  uint32_t retentionDueAt_ = 0;
   uint32_t requestSequence_ = 0;
   size_t currentScreen_ = 0;
+  bool preferencesReady_ = false;
+  bool retentionDirty_ = false;
 };

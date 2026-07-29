@@ -1,6 +1,6 @@
 # Servico Windows e Deploy
 
-## Implementacao 0.2.0
+## Implementacao 0.3.0
 
 O produto e separado em dois executaveis PyInstaller `onedir`:
 
@@ -20,7 +20,7 @@ Os diretorios intermediarios sao versionados em `dist\<versao>`, permitindo comp
 O Inno Setup gera:
 
 ```text
-dist\installer\LinkPadAgent-Setup-0.2.0.exe
+dist\installer\LinkPadAgent-Setup-0.3.0.exe
 ```
 
 O instalador:
@@ -54,6 +54,8 @@ Dependencias:
 
 `packaging\build.ps1 -SkipInstaller` gera apenas os dois executaveis.
 
+O workpath temporario do PyInstaller fica em `%LOCALAPPDATA%\LinkPad\AgentBuild\<versao>`, evitando bloqueios de cache quando o repositorio esta no OneDrive. `dist` continua sendo a saida final.
+
 ## Dados Operacionais
 
 ```text
@@ -65,11 +67,19 @@ Atualizacoes nao devem substituir esses dados. Sessoes e conexoes efemeras nunca
 
 ## Desenvolvimento
 
-`run-dev.ps1` nao instala servico nem usa ProgramData. Ele garante automaticamente a dependencia `python-snap7 3.0.0`, inicia core e bandeja juntos, usa `.dev` para dados locais e deve ser encerrado pelo menu do icone azul `D`. Como recuperacao, `reset-dev.ps1` tambem encerra o processo Python desse modo de desenvolvimento.
+`run-dev.ps1` nao instala servico nem usa ProgramData. Ele garante automaticamente `python-snap7 3.0.0` e `asyncua 2.0.1`, inicia core e bandeja juntos, usa `.dev` para dados locais e deve ser encerrado pelo menu do icone azul `D`. Como recuperacao, `reset-dev.ps1` tambem encerra o processo Python desse modo de desenvolvimento.
 
-O driver S7 e dependencia obrigatoria do pacote do servico. O build PyInstaller deve inclui-la no executavel antes de gerar um instalador de release. Nesta iteracao de desenvolvimento os testes foram executados sem reconstruir os instaladores.
+S7 e OPC UA sao dependencias obrigatorias do pacote do servico. O build PyInstaller `0.3.0` foi reconstruido e o executavel passou por smoke test de `/lpp/v1/capabilities` e abertura/encerramento de sessao com um servidor OPC UA real; os metadados/licenca do `asyncua` tambem foram coletados no diretorio `_internal`.
+
+Artefato gerado neste ciclo:
+
+```text
+dist\installer\LinkPadAgent-Setup-0.3.0.exe
+```
 
 ## Limitacoes de Release
 
 - os binarios ainda nao possuem assinatura digital;
 - a instalacao silenciosa e o ciclo completo instalar/atualizar/desinstalar ainda precisam de validacao em VM limpa.
+
+Proxima rodada de release deve validar VM limpa, upgrade preservando `config.json`, reinicio do servico, regra de firewall, bandeja unica, remocao e rollback. Assinatura Authenticode e publicacao com hash devem preceder distribuicao fora da bancada.

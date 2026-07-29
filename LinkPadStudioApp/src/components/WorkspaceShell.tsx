@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Activity, Cpu, Database, Monitor, RadioTower, Save, X } from "lucide-react";
 import { getHardwareManifest } from "../data/hardwareCatalog";
+import { useWidgetEditorController } from "../features/screens/useWidgetEditorController";
 import type { LinkPadProject, WorkspaceTab } from "../types/project";
 import { BottomTabs } from "./workspace/BottomTabs";
 import { ContextPanel } from "./workspace/ContextPanel";
@@ -37,14 +38,19 @@ export function WorkspaceShell({
 }: WorkspaceShellProps) {
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0];
   const hardware = getHardwareManifest(project.hardware.hardwareId);
+  const widgetEditor = useWidgetEditorController(
+    project,
+    activeTab.kind === "screen" ? activeTab.refId ?? "" : "",
+    onSetProject
+  );
 
   const statusItems = useMemo(
     () => [
       { icon: Cpu, label: hardware.name },
-      { icon: RadioTower, label: `${project.agent.host}:${project.agent.port}` },
+      { icon: RadioTower, label: `Rede LinkPad ${project.agent.host}:${project.agent.port}` },
       { icon: Monitor, label: `${hardware.display.width}x${hardware.display.height}` },
-      { icon: Database, label: `${project.tags.length} tags` },
-      { icon: Activity, label: "Agent nao testado" }
+      { icon: Database, label: `${project.tags.length} tags globais` },
+      { icon: Activity, label: "Agente não testado" }
     ],
     [hardware, project.agent.host, project.agent.port, project.tags.length]
   );
@@ -82,17 +88,25 @@ export function WorkspaceShell({
       <div className="workspace-grid">
         <ProjectTree
           project={project}
+          activeTab={activeTab}
           onSetProject={onSetProject}
           onOpenTab={onOpenTab}
+          onCloseTab={onCloseTab}
         />
         <Workbench
           project={project}
           hardware={hardware}
           activeTab={activeTab}
+          widgetEditor={widgetEditor}
           onSetProject={onSetProject}
           onOpenTab={onOpenTab}
         />
-        <ContextPanel project={project} hardware={hardware} activeTab={activeTab} />
+        <ContextPanel
+          project={project}
+          hardware={hardware}
+          activeTab={activeTab}
+          widgetEditor={widgetEditor}
+        />
       </div>
 
       <footer className="bottom-area">

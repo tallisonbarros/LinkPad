@@ -2,6 +2,34 @@
 
 Todas as mudancas relevantes deste produto serao registradas neste arquivo.
 
+## 0.3.0 - 2026-07-16
+
+### Adicionado
+
+- Driver generico `opcua` baseado em `asyncua 2.0.1`.
+- Target `opc.tcp://IPv4:4840` com sessao/request timeout, modo anonimo e seguranca None para laboratorio.
+- Node ID por indice (`ns=`) ou URI estavel (`nsu=`), com resolucao do namespace por sessao.
+- Leitura de DataValue com qualidade Good/Uncertain/Bad e timestamps OPC UA.
+- Boolean, inteiros assinados/sem sinal, Float, Double e String escalares.
+- Escrita tipada confirmada por releitura, sem repeticao automatica em falha ambigua.
+- Integracao real de teste `LinkPad Protocol -> Agent -> servidor asyncua`.
+- Migracao direta de configuracoes `0.2.0`/`0.3.0` para `0.4.0`, liberando `opcua` apenas quando o whitelist ainda e um default reconhecido.
+
+### Operacao
+
+- `run-dev.ps1` prepara tambem a dependencia OPC UA.
+- `run-dev.cmd` inicia o ambiente sem depender da politica global do PowerShell.
+- O bootstrap transversal instala os extras `dev,windows`, deixando API e bandeja prontas em um clone novo.
+- Workpath do PyInstaller movido para `%LOCALAPPDATA%` para evitar locks do OneDrive.
+- Executavel empacotado validado por `/lpp/v1/capabilities` e por abertura/encerramento de sessao com servidor OPC UA real.
+
+### Compatibilidade
+
+- LinkPad Protocol permanece `0.1.0` e mantem `value`/`valor`.
+- `sim` e `siemens-s7` permanecem inalterados.
+- Projetos com o placeholder `siemens-opcua` sao normalizados pelo Studio; o Agent aceita somente o identificador canonico `opcua`.
+- Certificados, credenciais protegidas e browse permanecem fora do MVP `0.3.0`.
+
 ## 0.2.0 - 2026-07-15
 
 ### Corrigido

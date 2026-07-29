@@ -44,11 +44,13 @@ Antes de abrir uma sessao, validar:
 
 Defaults devem priorizar redes privadas RFC1918. Redes adicionais exigem CIDR explicito.
 
-### Estado em 0.2.0
+### Estado em 0.3.0
 
 Estao implementadas as validacoes de driver permitido, formato do target, limite de sessoes, IPv4 literal, porta do driver e `allowedTargetNetworks`. O alias `private` libera apenas RFC1918; uma entrada CIDR libera a rede correspondente.
 
 O Agent bloqueia IPv6, loopback, link-local, multicast, unspecified e enderecos reservados mesmo quando uma regra for ampla. O `siemens-s7` limita adicionalmente a porta TCP 102 e rejeita `auth` no MVP.
+
+O driver `opcua` limita o MVP a TCP 4840, autenticacao anonima, `SecurityPolicy None` e `SecurityMode None`. O Studio mostra aviso de laboratorio. Certificados e segredos protegidos precisam permanecer no Agent e ainda nao sao aceitos por essa versao.
 
 ## Segredos Industriais
 
@@ -81,8 +83,13 @@ O default `token: ""` deixa a autenticacao publica desabilitada para facilitar o
 
 ## Futuro
 
-- TLS.
-- Certificados por device.
-- Manifestos de projeto assinados.
-- Rotacao de credenciais.
-- Auditoria exportavel.
+Ordem recomendada:
+
+1. OPC UA com certificado de aplicacao, trust store e pinagem do servidor;
+2. `Basic256Sha256`/`SignAndEncrypt` e credenciais no Windows Credential Manager;
+3. TLS da API Device-Agent e identidade por device;
+4. autorizacao de escrita por projeto/device/target;
+5. auditoria exportavel e rotacao de credenciais;
+6. manifestos de projeto assinados quando houver provisionamento/frota.
+
+Certificados OPC UA e certificados Device-Agent sao identidades diferentes e nao devem compartilhar automaticamente a mesma chave. Toda configuracao secreta permanece local ao Agent; o firmware recebe apenas referencia/politica quando esse contrato for definido.

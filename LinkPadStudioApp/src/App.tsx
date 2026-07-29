@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Cpu, FolderOpen, HelpCircle, LayoutGrid, Settings, Wrench } from "lucide-react";
+import { FolderOpen, HelpCircle, LayoutGrid, Settings, Wrench } from "lucide-react";
 import { StartupModal } from "./components/StartupModal";
 import { WorkspaceShell } from "./components/WorkspaceShell";
 import { createProject, loadRecentProjects, rememberProject, saveProjectToDisk } from "./services/projectService";
@@ -63,7 +63,6 @@ export function App() {
         { label: "Projeto", icon: FolderOpen },
         { label: "Exibir", icon: LayoutGrid },
         { label: "Ferramentas", icon: Wrench },
-        { label: "Device", icon: Cpu },
         { label: "Ajuda", icon: HelpCircle }
       ]}
       utilityActions={[

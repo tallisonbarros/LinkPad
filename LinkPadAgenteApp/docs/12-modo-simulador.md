@@ -44,3 +44,9 @@ Uma escrita substitui o valor inicial e leituras seguintes devolvem o valor escr
 ## Integracao Com Studio
 
 O Studio gera um perfil `sim`; o Device Runtime abre uma sessao normal no Agente. Nao existe configuracao manual do simulador no Windows.
+
+`sim` e diferente de Tag interna: o simulador pertence ao Agent, usa sessao HTTP e pode ser compartilhado por conexoes equivalentes; a Tag interna pertence ao cache do device, funciona offline e pode ser retentiva.
+
+## Evolucao
+
+O driver pode ganhar injecao controlada de atraso, offline, erro por ponto, qualidade e expiracao para testes reproduziveis. Essa capacidade deve vir por options/capabilities explicitas e nunca alterar silenciosamente o comportamento default `memory://`.

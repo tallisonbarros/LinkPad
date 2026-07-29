@@ -35,19 +35,39 @@
 - isolamento de conexoes lentas com lock por target e teste de regressao de concorrencia.
 - erros de handshake normalizados para diagnostico do Studio.
 
-## Proxima Validacao - S7-1200 Real
+## Validacao S7-1200 Real e Fechamento de Bancada
 
-- preparar DB dedicado nao otimizado no TIA Portal;
-- habilitar acesso PUT/GET;
-- validar leitura e escrita ponta a ponta M5 -> Agent -> PLC;
-- medir timeout, reconexao e estabilidade de polling;
-- validar embalagem PyInstaller do driver antes do proximo instalador.
+Concluido:
 
-## Conector Siemens Posterior - OPC UA
+- DB absoluto/PUT-GET preparado para a bancada;
+- handshake do Studio ate o PLC;
+- leitura ponta a ponta M5 -> Agent -> S7-1200.
 
-- implementar `siemens-opcua` com a biblioteca escolhida;
-- ler/escrever NodeIds e definir politica de certificados;
-- manter S7 nativo e OPC UA como conectores independentes.
+Pendente para fechamento:
+
+- validar escrita confirmada no PLC real;
+- medir timeout, reconexao e estabilidade de polling prolongado;
+- repetir os quatro tipos e varios perfis/devices;
+- registrar CPU, firmware e configuracao TIA da matriz validada.
+
+## Entregue em 0.3.0 - OPC UA Generico
+
+- `opcua` com `asyncua 2.0.1` e sessao reutilizada no pool;
+- Node ID `ns=`/`nsu=`, tipos escalares, qualidade e timestamp;
+- reconexao unica de leitura e escrita confirmada sem repeticao;
+- integracao automatizada LinkPad Protocol -> servidor OPC UA real;
+- Studio e firmware por descritores, sem biblioteca OPC no device;
+- build PyInstaller e smoke test do executavel concluidos.
+
+Permanecem posteriores: certificados/trust store, credenciais protegidas, `SignAndEncrypt` e browse online.
+
+## Proxima Validacao - OPC UA no S7-1200
+
+- habilitar/licenciar o servidor OPC UA e publicar interface no TIA Portal;
+- registrar endpoint, namespace e Node IDs;
+- validar leitura/escrita e qualidade real;
+- testar reinicio, certificado futuro e perda de rede;
+- comparar estabilidade/operacao com o S7 nativo sem tratar um como substituto do outro.
 
 ## Entrega Seguinte - Rockwell Logix
 
@@ -66,6 +86,17 @@
 - auditoria e logs operacionais mais completos;
 - TLS e identidade por device;
 - testes de carga, falha e upgrade do instalador.
+
+## Ordem Recomendada
+
+1. fechar as duas bancadas Siemens;
+2. implementar seguranca OPC UA de producao;
+3. criar teste de ponto e browse versionado;
+4. entregar Rockwell Logix no novo Agent;
+5. evoluir cache, limites, auditoria e TLS;
+6. validar instalador/upgrade e assinatura antes de distribuicao ampla.
+
+O snapshot compartilhado fica em `../../docs/06-estado-atual-e-proximos-passos.md`.
 
 ## Compatibilidade Legada Pendente
 

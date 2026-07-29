@@ -49,7 +49,7 @@ class SecurityConfig(ConfigModel):
         alias="allowedTargetNetworks",
     )
     allowed_drivers: list[str] = Field(
-        default_factory=lambda: ["sim", "siemens-s7"], alias="allowedDrivers"
+        default_factory=lambda: ["sim", "siemens-s7", "opcua"], alias="allowedDrivers"
     )
 
 
@@ -65,7 +65,7 @@ class LegacyConfig(ConfigModel):
 
 
 class AgentConfig(ConfigModel):
-    schema_version: str = Field(default="0.3.0", alias="schemaVersion")
+    schema_version: str = Field(default="0.4.0", alias="schemaVersion")
     product: str = PRODUCT_NAME
     server: ServerConfig = Field(default_factory=ServerConfig)
     management: ManagementConfig = Field(default_factory=ManagementConfig)
@@ -127,14 +127,16 @@ def load_config(paths: AppPaths | None = None) -> tuple[AgentConfig, AppPaths]:
 
 
 def _migrate_config(raw: dict) -> dict:
-    if raw.get("schemaVersion") != "0.2.0":
+    if raw.get("schemaVersion") not in {"0.2.0", "0.3.0"}:
         return raw
 
     migrated = deepcopy(raw)
     security = migrated.setdefault("security", {})
     if security.get("allowedDrivers") == ["sim"]:
         security["allowedDrivers"] = ["sim", "siemens-s7"]
+    if security.get("allowedDrivers") == ["sim", "siemens-s7"]:
+        security["allowedDrivers"] = ["sim", "siemens-s7", "opcua"]
     if security.get("allowedTargetNetworks") == ["private", "same-subnet"]:
         security["allowedTargetNetworks"] = ["private"]
-    migrated["schemaVersion"] = "0.3.0"
+    migrated["schemaVersion"] = "0.4.0"
     return migrated

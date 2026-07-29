@@ -312,7 +312,31 @@ def test_config_020_is_migrated_with_backup(tmp_path: Path) -> None:
 
     config, _ = load_config(paths)
 
-    assert config.schema_version == "0.3.0"
-    assert config.security.allowed_drivers == ["sim", "siemens-s7"]
+    assert config.schema_version == "0.4.0"
+    assert config.security.allowed_drivers == ["sim", "siemens-s7", "opcua"]
     assert config.security.allowed_target_networks == ["private"]
     assert (tmp_path / ".migration-backup" / "config-0.2.0.json").exists()
+
+
+def test_config_030_enables_opcua_only_for_the_previous_default(tmp_path: Path) -> None:
+    paths = AppPaths(
+        data_dir=tmp_path,
+        config_file=tmp_path / "config.json",
+        log_dir=tmp_path / "logs",
+    )
+    paths.config_file.write_text(
+        """{
+  "schemaVersion": "0.3.0",
+  "security": {
+    "allowedTargetNetworks": ["private"],
+    "allowedDrivers": ["sim", "siemens-s7"]
+  }
+}""",
+        encoding="utf-8",
+    )
+
+    config, _ = load_config(paths)
+
+    assert config.schema_version == "0.4.0"
+    assert config.security.allowed_drivers == ["sim", "siemens-s7", "opcua"]
+    assert (tmp_path / ".migration-backup" / "config-0.3.0.json").exists()

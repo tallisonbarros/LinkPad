@@ -2,11 +2,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { LinkPadProject } from "../types/project";
 
-export interface FirmwareGenerationResult {
-  ok: boolean;
-  outputPath: string;
-}
-
 export interface FirmwareBuildResult {
   ok: boolean;
   action: "build" | "flash";
@@ -39,10 +34,6 @@ export interface SerialPortDescriptor {
   name: string;
   label: string;
   connectionType: "usb" | "bluetooth" | "pci" | "unknown";
-}
-
-export function generateFirmware(project: LinkPadProject) {
-  return invoke<FirmwareGenerationResult>("generate_firmware", { project });
 }
 
 export async function runFirmwareBuild(

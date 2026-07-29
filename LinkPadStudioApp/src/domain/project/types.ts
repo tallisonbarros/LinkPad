@@ -12,12 +12,14 @@ export interface RuntimeStatusOverlayConfig {
 
 export type HardwareInputKind = "button" | "encoder" | "key" | "touch";
 export type HardwareInputEvent = "press" | "longPress" | "doublePress" | "rotateLeft" | "rotateRight";
+export type HardwareDeviceAction = "powerOff";
 
 export interface HardwareInputManifest {
   id: string;
   label: string;
   kind: HardwareInputKind;
   events: HardwareInputEvent[];
+  deviceActions: HardwareDeviceAction[];
   configurable: boolean;
   description?: string;
 }
@@ -41,13 +43,14 @@ export interface HardwareManifest {
     battery: boolean;
     buzzer: boolean;
     imu: boolean;
+    powerOff: boolean;
   };
 }
 
 export type ConnectorDriver =
   | "sim"
   | "siemens-s7"
-  | "siemens-opcua"
+  | "opcua"
   | "rockwell-logix"
   | "modbus-tcp"
   | "profinet-io";
@@ -63,12 +66,35 @@ export interface ProtocolProfile {
 }
 
 export type TagValue = string | number | boolean;
+export type LinkPadValueType = "bool" | "int" | "float" | "string";
+
+export interface ConnectorDataBinding {
+  kind: "connector";
+  protocolProfileId: string;
+  type: LinkPadValueType;
+  address: Record<string, string | number | boolean>;
+  pollMs: number;
+  simulationValue?: TagValue;
+  /** Compatibilidade com projetos 0.4.0 anteriores ao Studio 0.7.2. */
+  min?: number;
+  /** Compatibilidade com projetos 0.4.0 anteriores ao Studio 0.7.2. */
+  max?: number;
+}
+
+export interface GlobalTagDataBinding {
+  kind: "global-tag";
+  tagId: string;
+}
+
+export type LinkPadDataBinding = ConnectorDataBinding | GlobalTagDataBinding;
+
+export type LinkPadChangeOperation = "set" | "add" | "subtract" | "toggle";
 
 export type LinkPadAction =
   | { type: "navigate"; target: "next" | "previous" | "screen"; screenId?: string }
-  | { type: "writeTag"; tag: string; value: TagValue }
-  | { type: "toggleTag"; tag: string }
-  | { type: "activateWidget"; widgetId: string };
+  | { type: "changeValue"; binding: LinkPadDataBinding; operation: LinkPadChangeOperation; operand?: TagValue; min?: number; max?: number }
+  | { type: "activateWidget"; widgetId: string }
+  | { type: "powerOff" };
 
 export interface LinkPadInputBinding {
   inputId: string;
@@ -77,8 +103,9 @@ export interface LinkPadInputBinding {
 }
 
 export interface LinkPadTag {
+  id: string;
   name: string;
-  type: "bool" | "int" | "float" | "string";
+  type: LinkPadValueType;
   direction: "read" | "write" | "readWrite";
   source: "agent" | "internal" | "system" | "simulated";
   protocolProfileId?: string;
@@ -91,6 +118,8 @@ export interface LinkPadTag {
   max?: number;
   scale?: number;
   offset?: number;
+  initialValue?: TagValue;
+  retentive?: boolean;
   simulationValue?: TagValue;
   write?: {
     mode: "immediate" | "debounced";
@@ -116,18 +145,24 @@ export interface LinkPadWidget {
     | "tag_value"
     | "status_indicator"
     | "boolean_indicator"
+    | "gauge"
+    | "progress_bar"
     | "write_button";
   x: number;
   y: number;
   width: number;
   height: number;
   visible: boolean;
-  props: Record<string, string | number | boolean>;
+  props: Record<string, unknown>;
+  editor?: {
+    locked: boolean;
+    groupId?: string;
+  };
 }
 
 export interface LinkPadProject {
-  schemaVersion: "0.3.0";
-  studioVersion: "0.6.0";
+  schemaVersion: "0.9.0";
+  studioVersion: "0.17.1";
   projectId: string;
   name: string;
   description: string;
@@ -167,13 +202,77 @@ export interface LinkPadProject {
   };
 }
 
-export type LinkPadScreenV2 = Omit<LinkPadScreen, "inputBindings"> & {
-  inputBindings?: LinkPadInputBinding[];
+export type LinkPadActionV8 =
+  | Exclude<LinkPadAction, { type: "changeValue" }>
+  | { type: "writeTag"; binding: LinkPadDataBinding; value: TagValue; min?: number; max?: number }
+  | { type: "toggleTag"; binding: LinkPadDataBinding };
+
+export type LinkPadScreenV8 = Omit<LinkPadScreen, "inputBindings"> & {
+  inputBindings: Array<Omit<LinkPadInputBinding, "action"> & { action: LinkPadActionV8 }>;
 };
 
-export type LinkPadProjectV2 = Omit<LinkPadProject, "schemaVersion" | "studioVersion" | "screens"> & {
+export type LinkPadProjectV8 = Omit<LinkPadProject, "schemaVersion" | "studioVersion" | "screens"> & {
+  schemaVersion: "0.8.0";
+  studioVersion: string;
+  screens: LinkPadScreenV8[];
+};
+
+export type LinkPadProjectV7 = Omit<LinkPadProject, "schemaVersion" | "studioVersion"> & {
+  schemaVersion: "0.7.0";
+  studioVersion: string;
+};
+
+export type LinkPadProjectV6 = Omit<LinkPadProject, "schemaVersion" | "studioVersion"> & {
+  schemaVersion: "0.6.0";
+  studioVersion: string;
+};
+
+export type LinkPadProjectV5 = Omit<LinkPadProject, "schemaVersion" | "studioVersion"> & {
+  schemaVersion: "0.5.0";
+  studioVersion: string;
+};
+
+export type LinkPadProjectV4 = Omit<LinkPadProject, "schemaVersion" | "studioVersion" | "tags"> & {
+  schemaVersion: "0.4.0";
+  studioVersion: string;
+  tags: Array<Omit<LinkPadTag, "initialValue" | "retentive"> & {
+    initialValue?: TagValue;
+    retentive?: boolean;
+  }>;
+};
+
+export type LegacyLinkPadAction =
+  | { type: "navigate"; target: "next" | "previous" | "screen"; screenId?: string }
+  | { type: "writeTag"; tag: string; value: TagValue }
+  | { type: "toggleTag"; tag: string }
+  | { type: "activateWidget"; widgetId: string };
+
+export interface LinkPadInputBindingV3 {
+  inputId: string;
+  event: HardwareInputEvent;
+  action: LegacyLinkPadAction | LinkPadAction;
+}
+
+export type LinkPadScreenV3 = Omit<LinkPadScreen, "widgets" | "inputBindings"> & {
+  widgets: LinkPadWidget[];
+  inputBindings: LinkPadInputBindingV3[];
+};
+
+export type LinkPadProjectV3 = Omit<LinkPadProject, "schemaVersion" | "studioVersion" | "tags" | "screens"> & {
+  schemaVersion: "0.3.0";
+  studioVersion: string;
+  tags: Array<Omit<LinkPadTag, "id"> & { id?: string }>;
+  screens: LinkPadScreenV3[];
+};
+
+export type LinkPadScreenV2 = Omit<LinkPadScreenV3, "inputBindings"> & {
+  inputBindings?: LinkPadInputBindingV3[];
+};
+
+export type LinkPadProjectV2 = Omit<LinkPadProject, "schemaVersion" | "studioVersion" | "tags" | "screens"> & {
   schemaVersion: "0.2.0";
   studioVersion: string;
+  tags: Array<Omit<LinkPadTag, "id"> & { id?: string }>;
   screens: LinkPadScreenV2[];
 };
 
@@ -190,7 +289,7 @@ export interface LinkPadProjectV1 {
     statusOverlay?: RuntimeStatusOverlayConfig;
   };
   agent: Omit<LinkPadProject["agent"], "protocolVersion">;
-  tags?: Array<Omit<LinkPadTag, "protocolProfileId" | "address">>;
+  tags?: Array<Omit<LinkPadTag, "id" | "protocolProfileId" | "address"> & { id?: string }>;
   screens?: LinkPadScreenV2[];
   assets?: LinkPadProject["assets"];
 }
@@ -206,12 +305,10 @@ export interface RecentProject {
 
 export type WorkspaceTabKind =
   | "overview"
-  | "device"
   | "communication"
   | "connectors"
   | "tags"
   | "screen"
-  | "assets"
   | "build"
   | "diagnostics";
 
