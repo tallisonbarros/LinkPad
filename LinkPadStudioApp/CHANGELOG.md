@@ -17,7 +17,7 @@
 
 ### Corrigido
 
-- `package-lock.json` volta a ser aceito por `npm ci` em clones limpos e atualiza o PostCSS transitivo para a versao sem o alerta `GHSA-r28c-9q8g-f849`.
+- `package-lock.json` volta a ser aceito por `npm ci` em clones limpos, inclusive com o npm 11.16 do runner Node.js 24, e atualiza o PostCSS transitivo para a versao sem o alerta `GHSA-r28c-9q8g-f849`.
 - Tags globais sem nenhum consumidor em widgets ou controles permanecem no projeto de engenharia, mas deixam de ser incorporadas e consultadas pelo firmware.
 - Leituras parciais passam a atualizar a qualidade por ponto; uma Tag com erro nao bloqueia `Somar`, `Subtrair` ou `Inverter` sobre outra Tag `good` do mesmo PLC.
 - Falhas de leitura, resposta invalida ou perda de sessao invalidam a qualidade dos pontos afetados antes de uma nova operacao relativa, evitando calculo sobre cache obsoleto.

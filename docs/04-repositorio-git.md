@@ -36,6 +36,8 @@ setup-dev.cmd
 
 O launcher raiz chama `scripts/validate-work.ps1 -All -Bootstrap` com politica restrita ao processo. Ele cria `.venv`, instala o Agent com extras `dev,windows`, executa `npm ci` e roda as suites Python, TypeScript/UI e Rust. Nenhuma dependencia ou configuracao local e versionada. O Studio e o Agent podem entao ser iniciados por seus respectivos `run-dev.cmd`.
 
+O workflow `.github/workflows/ci.yml` reproduz o mesmo perfil Windows: instala os extras `dev,windows`, isola os temporarios do pytest em `.dev/pytest` e usa o lockfile completo aceito pelo npm fornecido com Node.js 24.
+
 ## Branches
 
 - `main`: estado integrado e validado.

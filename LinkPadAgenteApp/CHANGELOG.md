@@ -20,6 +20,7 @@ Todas as mudancas relevantes deste produto serao registradas neste arquivo.
 - `run-dev.ps1` prepara tambem a dependencia OPC UA.
 - `run-dev.cmd` inicia o ambiente sem depender da politica global do PowerShell.
 - O bootstrap transversal instala os extras `dev,windows`, deixando API e bandeja prontas em um clone novo.
+- A CI Windows usa o mesmo conjunto `dev,windows` e um diretorio temporario isolado para executar inclusive os testes da bandeja.
 - Workpath do PyInstaller movido para `%LOCALAPPDATA%` para evitar locks do OneDrive.
 - Executavel empacotado validado por `/lpp/v1/capabilities` e por abertura/encerramento de sessao com servidor OPC UA real.
 
